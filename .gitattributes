@@ -1,0 +1,10 @@
+* text=auto
+*.gd text eol=lf
+*.py text eol=lf
+*.c text eol=lf
+*.command text eol=lf
+*.md text eol=lf
+*.png binary
+*.ogg binary
+*.wav binary
+*.otf binary

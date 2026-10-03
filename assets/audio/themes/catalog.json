@@ -1,0 +1,93 @@
+[
+  {
+    "theme": "harbor",
+    "title": "海港：晴日航线",
+    "bpm": 112,
+    "seconds": 137.14,
+    "file": "harbor.ogg"
+  },
+  {
+    "theme": "forest",
+    "title": "森林：萤火小径",
+    "bpm": 100,
+    "seconds": 153.6,
+    "file": "forest.ogg"
+  },
+  {
+    "theme": "frost",
+    "title": "冰雪：雪晶舞曲",
+    "bpm": 88,
+    "seconds": 174.55,
+    "file": "frost.ogg"
+  },
+  {
+    "theme": "desert",
+    "title": "沙漠：沙海旅人",
+    "bpm": 110,
+    "seconds": 139.64,
+    "file": "desert.ogg"
+  },
+  {
+    "theme": "volcano",
+    "title": "火山：熔岩脉动",
+    "bpm": 124,
+    "seconds": 123.87,
+    "file": "volcano.ogg"
+  },
+  {
+    "theme": "factory",
+    "title": "工厂：齿轮节拍",
+    "bpm": 128,
+    "seconds": 120.0,
+    "file": "factory.ogg"
+  },
+  {
+    "theme": "candy",
+    "title": "糖果：汽水派对",
+    "bpm": 120,
+    "seconds": 128.0,
+    "file": "candy.ogg"
+  },
+  {
+    "theme": "cosmos",
+    "title": "星空：轨道漫游",
+    "bpm": 92,
+    "seconds": 166.96,
+    "file": "cosmos.ogg"
+  },
+  {
+    "theme": "swamp",
+    "title": "沼泽：萤灯夜行",
+    "bpm": 96,
+    "seconds": 160.0,
+    "file": "swamp.ogg"
+  },
+  {
+    "theme": "ruins",
+    "title": "遗迹：砂钟回声",
+    "bpm": 90,
+    "seconds": 170.67,
+    "file": "ruins.ogg"
+  },
+  {
+    "theme": "reef",
+    "title": "深海：珊瑚梦境",
+    "bpm": 84,
+    "seconds": 182.86,
+    "file": "reef.ogg"
+  },
+  {
+    "theme": "sky",
+    "title": "空港：风帆航线",
+    "bpm": 118,
+    "seconds": 130.17,
+    "file": "sky.ogg"
+  },
+  {
+    "theme": "citadel",
+    "title": "王城：归航之光",
+    "bpm": 122,
+    "seconds": 125.9,
+    "file": "citadel.ogg"
+  }
+]

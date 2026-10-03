@@ -1,0 +1,61 @@
+# Godot editor caches and imported/compiled resources
+.godot/
+.import/
+*.import
+*.gdc
+*.ctex
+*.translation
+
+# Exported games, bundled engines, installers and archives
+/dist/
+/build/
+/bin/
+/releases/
+*.app/
+*.pck
+*.exe
+*.dll
+*.so
+*.dylib
+*.wasm
+*.o
+*.obj
+*.a
+*.lib
+*.zip
+*.dmg
+*.pkg
+*.msi
+*.tar
+*.tar.gz
+*.7z
+
+# Local previews; curated README images live in docs/screenshots
+/title.png
+/gameplay.png
+/splash.png
+/paused.png
+/result.png
+/arena-*.png
+/*-gallery.png
+/theme-*.png
+/story-*.png
+/adventure-*.png
+
+# Python and local tooling caches
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.cache/
+*.log
+*.tmp
+
+# Local saves and operating-system/editor files
+profile.json
+profile.json.tmp
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
