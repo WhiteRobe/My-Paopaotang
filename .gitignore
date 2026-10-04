@@ -61,3 +61,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Path-only resource references; Godot may regenerate these sidecars.
+*.uid

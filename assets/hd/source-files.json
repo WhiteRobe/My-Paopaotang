@@ -318,5 +318,19 @@
   {
     "name": "heroes-front-hd-clean-4x2",
     "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-3e82f63a-bc41-459c-9cc7-68cf9364c00e.png"
+  },
+  {
+    "name": "blocks-depth-v463",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-8e1125be-15b6-46e8-a84a-23f7478fc3db.png",
+    "tool": "built-in imagegen"
+  },
+  {
+    "name": "pressure-core-v464",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-773d8dc2-0bb7-434d-8081-b4f0ce2324b8.png",
+    "tool": "built-in imagegen"
+  },
+  {
+    "name": "mechanisms-v472",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-d879af78-5600-440d-87d7-8cd709686efd.png"
   }
 ]

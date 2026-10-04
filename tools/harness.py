@@ -51,11 +51,11 @@ def logged(command, output, name, timeout):
 
 def preflight():
     errors = []
-    for path in [ROOT / "project.godot", ROOT / "main.tscn"]:
+    for path in [ROOT / "project.godot", ROOT / "scenes/main.tscn"]:
         if not path.is_file():
             errors.append(f"缺少入口：{path.name}")
-    sources = [*ROOT.glob("*.gd"), *ROOT.glob("*.tscn"),
-               *ROOT.glob("data/*.gd"), *ROOT.glob("assets/**/*.tres"),
+    sources = [*ROOT.glob("scripts/**/*.gd"), *ROOT.glob("scenes/**/*.tscn"),
+               *ROOT.glob("tools/*.gd"), *ROOT.glob("assets/**/*.tres"),
                *ROOT.glob("assets/**/*.gdshader")]
     for path in sources:
         for resource in re.findall(r'"(res://[^"\n]+)"(?!\s*\+)', path.read_text()):

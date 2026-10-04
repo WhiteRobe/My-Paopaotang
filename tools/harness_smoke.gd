@@ -12,7 +12,7 @@ func boot():
 		push_error("Harness requires an absolute output directory.")
 		quit(1)
 		return
-	var scene=load("res://main.tscn")
+	var scene=load("res://scenes/main.tscn")
 	if scene==null:
 		quit(1)
 		return

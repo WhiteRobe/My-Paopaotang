@@ -32,7 +32,7 @@ python3 tools/harness.py build-macos
 - `game.gd` 持有共享状态，其他模块通过 `g` 调用它。不要独立复制地图、玩家、泡泡或掉落状态。
 - 角色移动按用户要求改为连续位置 `visual` 与小脚底碰撞体；`cell` 从实际位置就近取整，用于泡泡放置、机关、伤害和拾取。不要提前把 `cell` 设为移动终点，怪物与 Bot 路由仍使用网格。
 - 网格值固定为 `0` 空地、`1` 墙、`2` 箱、`3` 坍塌地块。改箱体覆盖时维护 `crates.by_cell` 与 `grid`。
-- 地图、主题、道具、角色、坐骑索引由 `data/catalog.gd` 决定；剧情索引由 `data/story.gd` 决定。新增内容时检查硬编码计数、图鉴、Bot、素材图集、翻译和文档。
+- 地图、主题、道具、角色、坐骑索引由 `scripts/data/catalog.gd` 决定；剧情索引由 `scripts/data/story.gd` 决定。新增内容时检查硬编码计数、图鉴、Bot、素材图集、翻译和文档。
 - 泡泡路径同时影响水柱、预警与 Bot 避险。改伤害或属性时检查 `blast_cells`、`danger_cells`、`bubble_effects.gd` 与 `adventure.gd`。
 - 保持玩家一 Q、玩家二 / 的道具键；保持 1080p、本机最多四名真人、对战最多八个席位、中文可用。改变这些约定须有明确需求。
 - 真实存档是 `user://profile.json`，写入采用临时文件再重命名。修改存档字段时为旧存档提供默认值，禁止重置玩家进度。
@@ -45,9 +45,11 @@ python3 tools/harness.py build-macos
 - 游戏资源放 `assets/`，原创制作脚本放 `tools/`，保留第三方授权声明。
 - 临时截图、预览、运行报告、日志与检查存档放 `/tmp/paopaotang-*`。不要放项目根目录。
 - `docs/screenshots/` 只保留文档实际引用、准备交付的精选图片。Godot 缓存、运行时、安装包和 `dist/` 不提交。
-- 源码 `.uid` 可提交；`.import` 与 `.godot/` 是可再生成的导入文件，不提交。
+- 本项目按用户要求只维护 `res://` 路径引用，不维护 `.uid`。`.uid`、`.import` 与 `.godot/` 均忽略；编辑器可能重新生成。
 - 不因增加检查工具而自动重制音乐、批量更新翻译、修改角色数值或重打包大型应用。
 
 ## 交付
 
 先完成必要检查，再报告改动、检查结果、证据目录和未覆盖项。不要把“导入通过”写成“所有地图可通关”。只有明确要求提交或推送时才处理相应 Git 操作；不要把无关的已有工作区修改一起提交。
+
+源码按职责放在 `scripts/core/`、`scripts/gameplay/`、`scripts/render/`、`scripts/ui/`、`scripts/data/`；场景放 `scenes/`，工具保持 `tools/`。禁止将游戏脚本重新平铺到根目录。

@@ -70,3 +70,27 @@ Use case: stylized-concept. Create a brand new polished application icon for an 
 
 
 v4.5 新增 `hero-trapped-v5.png`（8×4）、`hero-death-v5.png`（8×3）、`bubble-break-v5.png`（6×2）及 `mechanisms-v5.png`（4×4）。由内置 imagegen 生成；倒地图集再次生成更宽透明间隔版本。原图路径记录于 `source-files.json`，初次生成提示词见 `v5-prompts.json`。所有 PNG 原样复制，索引只分析裁切区域。倒地三行使用实际透明间隔，避免均分高度截断人物。
+
+
+### v4.6.3 箱墙体积与动画裁切
+
+`blocks-depth-v463.png` 为内置 imagegen 原始输出，使用第 2～7 格替换墙块与箱体；墙体绘制乘以十四主题对应的色调。地面保持原主题图集。完整提示词记录在 [blocks-depth-v463-prompt.txt](blocks-depth-v463-prompt.txt)，原始路径见 source-files.json。
+
+行走区域恢复每帧的实际尺寸，不把较矮帧向上扩展成全局高度；统一缩放比例放在 game.gd 的绘制阶段，避免采到上一行的脚和衣物。人物原图未修改。
+
+
+### v4.7.0 高压核心
+
+`pressure-core-v464.png` 为内置 imagegen 原始输出，整张用于 PVE 新道具；文件名保留制作时编号。提示词见 [pressure-core-v464-prompt.txt](pressure-core-v464-prompt.txt)，原始文件路径见 `source-files.json`。未修改生成原图像素。
+
+本次统一遮挡由游戏绘制顺序实现，原门、人物、怪物、坐骑贴图保持不变。火把图标改为底部居中落地，避免偏向格子右侧。
+
+
+### v4.7.1 全局图集裁切
+
+只重建区域索引，不编辑或重采样原始 PNG。按每列透明间隔找到帧边界；对处于主体矩形内的少量邻帧残片记录排除矩形，在绘制阶段拆分源区域。角色主题色着色器同步排除这些像素，保持原有完整人物设计。
+
+
+### v4.7.2 机关重绘
+
+新增原创透明 4×4 图集 `mechanisms-v472.png`，涵盖地刺、闸门、传送盘、输送带、炮台、激光发射器、反射板等。原始生成 PNG 直接复制，像素未作二次修改；索引通过透明边界定位，替换旧机关图集和早期线框门。提示词保存在 `mechanisms-v472-prompt.txt`，原文件位置见 `source-files.json`。
