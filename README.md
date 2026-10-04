@@ -13,9 +13,11 @@
 
 [开始游戏](#start) · [四种玩法](#modes) · [剧情冒险](#story) · [操作说明](#controls) · [菜单与大厅](docs/菜单与大厅设计.md) · [完整手册](docs/玩法说明.md)
 
-<img src="docs/screenshots/v45-arena8.png" alt="像素海港里的泡泡对战实机画面" width="100%">
+<img src="docs/screenshots/readme-v462-teams.png" alt="v4.6.2 海港八席位组队对战实机画面" width="100%">
 
 </div>
+
+> 以下展示画面均重新截取自 v4.6.2；静态截图为 1920×1080，动画来自实际对局。
 
 用 Godot 制作的中文像素泡泡对战游戏。从两个人共用一块键盘开始，也可以带上电脑队友，探索五章群岛故事，或者来一场八人混战。
 
@@ -73,8 +75,8 @@ python3 tools/build_macos.py /Applications/Godot.app/Contents/MacOS/Godot
 | --- | --- |
 | **剧情冒险 PVE** | 一到四名真人，可由 Bot 补足队伍。五章二十节，完成收集、救援、点灯、护送、守点与波次战，挑战五位 Boss |
 | **单人闯关** | 二十关逐步增加难度。可以带电脑队友，也可以独自挑战多名敌人 |
-| **自由混战** | 两到四个席位，真人与 Bot 混合，各自为战，先赢两局夺冠 |
-| **2v2 组队** | 四个席位，支持前两人同队或交叉分组，协作救援、包围对手 |
+| **自由混战** | 两到八个席位，最多四名真人与 Bot 混合，各自为战，先赢两局夺冠 |
+| **组队对战** | 支持 2v2、3v3、4v4，连续或交叉分组，协作救援、包围对手 |
 
 对战可指定地图，也可随机选图，每局重新抽取。全部地图都能在地图图鉴中浏览。
 
@@ -97,8 +99,8 @@ python3 tools/build_macos.py /Applications/Godot.app/Contents/MacOS/Godot
 
 <table>
 <tr>
-<td width="50%"><img src="docs/screenshots/story-1.png" alt="中文剧情对白"></td>
-<td width="50%"><img src="docs/screenshots/adventure-20.png" alt="王城冒险实机画面"></td>
+<td width="50%"><img src="docs/screenshots/readme-v462-story.png" alt="中文剧情对白"></td>
+<td width="50%"><img src="docs/screenshots/readme-v462-boss.png" alt="王城冒险实机画面"></td>
 </tr>
 <tr><td align="center">旅途从一段中文对白开始</td><td align="center">机关、任务与 Boss 同场登场</td></tr>
 </table>
@@ -111,15 +113,15 @@ python3 tools/build_macos.py /Applications/Godot.app/Contents/MacOS/Godot
 
 队友被困时，触碰即可救援；自己也能用脱困针或护盾脱身。剧情模式还有每关共享的复苏次数。**角色当前采用被困、救援和复苏规则；生命值系统用于怪物与 Boss。**
 
-<img src="docs/screenshots/items-gallery.png" alt="原创像素道具图鉴" width="100%">
+<img src="docs/screenshots/readme-v462-items.png" alt="原创像素道具图鉴" width="100%">
 
 蓝莓、桃桃、薄荷、柚子、雪球、星芽、机仔和火苗有各自的外观与初始能力。随着闯关解锁更多伙伴，人物选择会随存档保留。
 
-<img src="docs/screenshots/characters-gallery.png" alt="八位不同造型的像素角色" width="100%">
+<img src="docs/screenshots/readme-v462-characters.png" alt="八位不同造型的像素角色" width="100%">
 
 ## 🔦 昼夜、迷雾与洞窟
 
-普通地图每 90 秒经历白天、黄昏、夜晚和黎明。夜里主要依靠角色周围约三格的视野；墙与箱子会遮光，泡泡在爆炸前的最后 1.2 秒逐渐变亮，连环爆炸也会照亮水柱附近。
+普通地图保持白昼，配置了昼夜机制的地图每 90 秒经历白天、黄昏、夜晚和黎明。夜里主要依靠角色周围约三格的视野；墙与箱子会遮光，泡泡在爆炸前的最后 1.2 秒逐渐变亮，连环爆炸也会照亮水柱附近。
 
 新增四张常夜洞窟地图：火炬岩窟、迷雾矿道、地下暗河、蝠影回音厅。每局随机生成六处固定火把，位置整局保持不变，持续照亮附近地形。洞窟有岩晶、蘑菇、钟乳石与飞过的蝙蝠，并使用独立的洞窟回声音乐。
 
@@ -127,7 +129,7 @@ python3 tools/build_macos.py /Applications/Godot.app/Contents/MacOS/Godot
 
 海港与空港有海鸥，森林与沼泽有蝴蝶，深海有鱼群，工厂有蒸汽，星空有流星，其他主题也有对应的环境动画。
 
-<img src="docs/screenshots/cave-night.png" alt="常夜洞窟、固定火把与角色视野" width="100%">
+<img src="docs/screenshots/readme-v462-cave.png" alt="常夜洞窟、固定火把与角色视野" width="100%">
 
 ## 📦 箱子也有脾气
 
@@ -135,7 +137,7 @@ python3 tools/build_macos.py /Applications/Godot.app/Contents/MacOS/Godot
 
 六种属性核心让泡泡改变颜色与效果：冰晶冻结、烈焰扩大中心冲击、雷鸣跳跃电弧、藤蔓留下减速区、净化救援与保护、穿透越过第一只箱子。使用核心可充能二十秒，同时改变已放置的己方泡泡。新增核心使用原有道具键，玩家一 Q、玩家二 /。已检查箱体推动、两次与八次命中、六件奖励保留、六种核心使用，以及 44 张地图和 20 节剧情的对局结算。
 
-<img src="docs/screenshots/crates-gallery.png" alt="普通箱、轮箱、加固箱、宝库箱及六种属性泡泡" width="100%">
+<img src="docs/screenshots/readme-v462-crates.png" alt="v4.6.2 方块图鉴与宝库箱说明" width="100%">
 
 <a id="controls"></a>
 ## ⌨️ 一起开玩
@@ -224,7 +226,7 @@ python3 tools/compose_themes.py
 
 本轮人物、动作与战斗画面的改动见 [美术升级计划](docs/美术升级计划.md)。
 
-<img src="docs/screenshots/hero-animation.gif" alt="实机行走、受击、困泡和骑乘动画" width="100%">
+<img src="docs/screenshots/readme-v462-gameplay.gif" alt="v4.6.2 实机移动、困泡与连锁爆炸" width="100%">
 
 更多规则、道具效果与地图机关，请查看 [完整玩法说明](docs/玩法说明.md)。
 
@@ -242,7 +244,7 @@ python3 tools/compose_themes.py
 
 <div align="center">
 
-<img src="docs/screenshots/title.png" alt="泡泡糖游戏标题画面" width="85%">
+<img src="docs/screenshots/readme-v462-menu.png" alt="v4.6.2 泡泡糖主菜单" width="85%">
 
 **下一颗泡泡，记得给队友留条路。**
 
@@ -255,14 +257,14 @@ v4.6：自由移动与尺寸修正
 
 地图道具缩至 12×12 逻辑像素，保留原图纵横比；HUD 为 13×13、背包为 22×22，不再让拾取物跨越一格。人物菜单整帧改为等比例显示，正面图集重新排列为 4×2，扩大透明间隔；脚底与阴影统一锚点，站立去掉整体上下浮动。八席位各有服装主题色，五官与主要造型保留，HUD 和局内编号显示个人颜色，组队地面环保持队伍颜色。
 
-修正后的 [道具画面](docs/screenshots/v46-items.png)、[角色主题色](docs/screenshots/v46-player-palettes.png)、[模式菜单](docs/screenshots/v46-menu.png) 与 [怪物动画](docs/screenshots/v46-monster-animation.gif)。
+修正后的 [道具画面](docs/screenshots/readme-v462-items.png)、[人物与坐骑](docs/screenshots/readme-v462-characters.png)、[模式菜单](docs/screenshots/readme-v462-modes.png) 与 [Boss 实机画面](docs/screenshots/readme-v462-boss.png)。
 
 
-v4.6.1：局内通知移到地图外的左侧信息栏，三秒后消退并恢复道具说明。通知在五种语言下限制换行和宽度，地图上不再出现横幅。[实机画面](docs/screenshots/v461-notice-sidebar.png)。
+v4.6.1：局内通知移到地图外的左侧信息栏，三秒后消退并恢复道具说明。通知在五种语言下限制换行和宽度，地图上不再出现横幅。[实机画面](docs/screenshots/readme-v462-pve.png)。
 
 
 v4.6.2：运行与操作优化（2026-10-04）
 
 实机场景复现并修复了冰冻怪物仍在滑动、怪物在抵达角色前触发接触伤害、冰冻角色跳过水柱伤害、水流和阵风推力间歇中断、跳跃坐骑落地后继续执行旧位移，以及关门判定忽略格内脚底位置的问题。切出游戏窗口会进入暂停，需要手动继续。
 
-界面长说明限制行数，过长单词与标签不会越界。剧情侧栏显示支线目标、支线进度和复苏次数，数字留有独立位置；同步五语言。冰冻覆盖层降低不透明度，角色本体更清楚。[中文画面](docs/screenshots/v462-pve-sidebar.png)、[德文布局](docs/screenshots/v462-pve-de.png)。
+界面长说明限制行数，过长单词与标签不会越界。剧情侧栏显示支线目标、支线进度和复苏次数，数字留有独立位置；同步五语言。冰冻覆盖层降低不透明度，角色本体更清楚。[中文画面](docs/screenshots/readme-v462-pve.png)、[德文布局](docs/screenshots/readme-v462-pve-de.png)。
