@@ -7,20 +7,20 @@ var echoes:Array=[]
 func _init(game):g=game
 func setup():
 	cells.clear();echoes.clear();timer=5;bridge_open=true
-	var points=[Vector2i(4,4),Vector2i(16,10),Vector2i(4,10),Vector2i(16,4),Vector2i(10,5),Vector2i(10,9)]
+	var points=[Vector2i(4,4),Vector2i(g.W-5,g.H-5),Vector2i(4,g.H-5),Vector2i(g.W-5,4),Vector2i(g.W/2,g.H/2-3),Vector2i(g.W/2,g.H/2+3)]
 	match g.rule():
 		"mud","poison","spikes","gustpads","whirlpool","mirror","geyser","chronofield":
 			for c in points:
 				g.clear_patch(c);cells.append(c)
 				var type={"mud":"mud","poison":"spore","spikes":"spike","gustpads":"gust","whirlpool":"vortex","mirror":"mirror","geyser":"geyser","chronofield":"clock"}[g.rule()]
-				g.terrain[c]={"type":type,"turn":1 if c.x<10 else -1}
+				g.terrain[c]={"type":type,"turn":1 if c.x<g.W/2 else -1}
 		"currents":
-			for y in [4,10]:
+			for y in [4,g.H-5]:
 				for x in range(2,g.W-2):
 					g.grid[y][x]=0;g.terrain[Vector2i(x,y)]={"type":"flow","dir":Vector2i.RIGHT if y==4 else Vector2i.LEFT}
 		"bridges":
-			for x in [5,6,7,13,14,15]:
-				var c=Vector2i(x,7);cells.append(c);g.grid[c.y][c.x]=0;g.terrain[c]={"type":"bridge"}
+			for x in [g.W/2-4,g.W/2-3,g.W/2-2,g.W/2+2,g.W/2+3,g.W/2+4]:
+				var c=Vector2i(x,g.H/2);cells.append(c);g.grid[c.y][c.x]=0;g.terrain[c]={"type":"bridge"}
 		"turrets":cells=[Vector2i(0,4),Vector2i(g.W-1,10),Vector2i(6,0),Vector2i(14,g.H-1)]
 		"blackout":
 			for c in points:g.clear_patch(c);g.terrain[c]={"type":"lamp"};cells.append(c)
@@ -92,46 +92,16 @@ func on_explode(b,water_cells):
 	if g.rule()=="echo":echoes.append({"cells":water_cells.duplicate(),"owner":b.owner,"element":b.get("element",0),"wait":.9})
 func draw():
 	if g.arena<20:return
+	if g.rule()=="turrets":
+		for c in cells:
+			var pos=g.center(c)
+			g.draw_circle(pos,5,Color("26313e"));g.draw_arc(pos,5,0,TAU,20,Color("8d9aab"),1)
+			var inward=Vector2.RIGHT if c.x==0 else Vector2.LEFT if c.x==g.W-1 else Vector2.DOWN if c.y==0 else Vector2.UP
+			g.draw_line(pos,pos+inward*9,Color("1a2637"),4);g.draw_line(pos,pos+inward*8,Color("9cabb7"),2)
 	for echo in echoes:
 		for c in echo.cells:
 			g.draw_rect(Rect2(g.ORIGIN+Vector2(c)*g.TILE+Vector2(2,2),Vector2(14,14)),Color("adc9ff"),false,1)
-	for c in cells:
-		var pos=g.center(c)
-		if g.inside(c) and g.grid[c.y][c.x]==3:continue
-		match g.rule():
-			"geyser":
-				g.draw_circle(pos,7,Color("568ea9"));g.draw_arc(pos,5,0,TAU,16,Color("b8eff0"),2)
-				if timer<1.5:g.draw_line(pos+Vector2(-3,2),pos+Vector2(-3,-10),Color("c6f6ef"),2);g.draw_line(pos+Vector2(3,2),pos+Vector2(3,-7),Color("c6f6ef"),2)
-			"chronofield":
-				g.draw_circle(pos,7,Color("656c9c"));g.draw_arc(pos,6,0,TAU,20,Color("e3dfaa"),1);g.draw_line(pos,pos+Vector2(sin(g.elapsed)*4,-cos(g.elapsed)*4),Color("fff1a8"),1)
-			"mud":
-				g.draw_circle(pos,7,Color("82705d"))
-				g.draw_arc(pos,5,.2,2.8,15,Color("b1a27d"),1)
-			"poison":
-				g.rect(pos+Vector2(-2,-1),Vector2(4,8),Color("c9b68b"));g.draw_circle(pos+Vector2(0,-3),6,Color("b984c5"));g.draw_circle(pos+Vector2(-2,-5),1.5,Color("e8e2b4"))
-			"spikes":
-				for x in [-5,0,5]:g.draw_colored_polygon(PackedVector2Array([pos+Vector2(x-2,4),pos+Vector2(x,-4),pos+Vector2(x+2,4)]),Color("c9cbcd"))
-			"gustpads":
-				g.draw_circle(pos,7,Color("6d899b"));g.draw_arc(pos,5,g.elapsed*3,g.elapsed*3+4,20,Color("e5ebc1"),2)
-			"mirror":
-				g.draw_colored_polygon(PackedVector2Array([pos+Vector2(0,-7),pos+Vector2(6,0),pos+Vector2(0,7),pos+Vector2(-6,0)]),Color("9bdfdf"))
-				g.draw_line(pos+Vector2(-4,4),pos+Vector2(4,-4),Color("f3ffe2"),2)
-			"whirlpool":
-				for r in [3,6,8]:g.draw_arc(pos,r,g.elapsed*2+r,g.elapsed*2+r+4.5,20,Color("b5d5ee"),1)
-			"bridges":
-				g.rect(pos-Vector2(8,8),Vector2(16,16),Color("b4a482") if bridge_open else Color("303b54"))
-				for y in [-6,-2,2,6]:g.draw_line(pos+Vector2(-7,y),pos+Vector2(7,y),Color("ecdbc0") if bridge_open else Color("695d73"),1)
-			"blackout":
-				g.rect(pos+Vector2(-2,-4),Vector2(4,13),Color("bba1c4"));g.rect(pos+Vector2(-5,-9),Vector2(10,7),Color("f2e8a4") if fmod(g.round_time,12)<8 else Color("676080"))
-			"turrets":
-				g.draw_circle(pos,7,Color("786e87"));g.rect(pos+Vector2(-3,-5),Vector2(6,10),Color("e2bb8d"));g.draw_circle(pos,2,Color("25334a"))
 func draw_overlay():
 	if g.rule()!="blackout" or fmod(g.round_time,12)<8:return
-	for y in range(1,g.H-1):
-		for x in range(1,g.W-1):
-			var c=Vector2i(x,y);var visible=false
-			for p in g.players:
-				if not p.dead and g.manhattan(c,p.cell)<=3:visible=true;break
-			if not visible:g.rect(g.ORIGIN+Vector2(c)*g.TILE,Vector2(g.TILE,g.TILE),Color(.04,.03,.1,.72))
 	for hazard in g.hazards:
 		for c in hazard.cells:g.draw_arc(g.center(c),6,0,TAU,16,Color("ffdd9d"),1)

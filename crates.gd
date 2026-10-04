@@ -2,8 +2,6 @@ extends RefCounted
 var g
 var boxes:Array=[]
 var by_cell:Dictionary={}
-var art=preload("res://assets/crates.png")
-var vault_art=preload("res://assets/vault-crates.png")
 func _init(game):g=game
 func footprint(b,anchor=null):
 	var result:Array=[]
@@ -91,7 +89,7 @@ func damage(c,owner=-1,hit_boxes=null):
 			if index>=rewards.size():break
 			if not g.inside(tile) or g.grid[tile.y][tile.x]!=0 or g.bomb_at(tile)!=null:continue
 			g.drops[tile]=rewards[index];index+=1
-		g.announce("宝库开启！坐骑、成长和属性核心掉落！");g.world_fx.impact(g.center(b.cell)+Vector2(9,9),5,60);g.shake=2
+		g.announce("宝库开启：坐骑、成长、属性核心！");g.world_fx.impact(g.center(b.cell)+Vector2(9,9),5,60);g.shake=2
 	elif not g.drops.has(c) and g.rng.randf()<(.95 if b.kind=="armor" else .76):g.drops[c]=g.random_drop()
 	rebuild()
 func draw():
@@ -101,12 +99,15 @@ func draw():
 		var state=0 if b.hp==b.max_hp else (1 if b.hp>b.max_hp/3 else 2)
 		var pos=g.ORIGIN+b.visual*g.TILE
 		if b.kind=="vault":
-			g.draw_texture_rect_region(vault_art,Rect2(pos-Vector2(1,1),Vector2(36,36)),Rect2(Vector2(state*40,theme*40),Vector2(40,40)))
-			g.rect(pos+Vector2(3,33),Vector2(30,2),g.INK);g.rect(pos+Vector2(3,33),Vector2(30*b.hp/float(b.max_hp),2),Color("ffe7a3"))
+			g.hd.theme_sprite(theme,6 if state==0 else 7,pos-Vector2(1,1),Vector2.ONE*g.TILE*2)
+			g.rect(pos+Vector2(3,g.TILE*2-2),Vector2(g.TILE*2-6,2),g.INK);g.rect(pos+Vector2(3,g.TILE*2-2),Vector2((g.TILE*2-6)*b.hp/float(b.max_hp),2),Color("ffe7a3"))
 			if int(g.elapsed*3)%3==0:g.rect(pos+Vector2(30,5),Vector2(2,2),Color("fff6ce"))
 		else:
 			var kind={"normal":0,"push":1,"armor":2}[b.kind]
-			g.draw_texture_rect_region(art,Rect2(pos-Vector2(1,2),Vector2(20,20)),Rect2(Vector2(kind*20,(theme*3+state)*20),Vector2(20,20)))
+			g.hd.theme_sprite(theme,3+kind,pos-Vector2(1,2),Vector2.ONE*g.TILE)
+			if state>0:
+				g.draw_polyline(PackedVector2Array([pos+Vector2(7,3),pos+Vector2(9,7),pos+Vector2(6,11),pos+Vector2(10,16)]),Color("584136"),.6)
+				if state==2:g.draw_line(pos+Vector2(9,7),pos+Vector2(14,5),Color("584136"),.6)
 			if b.kind=="armor":
 				for n in range(b.hp):g.rect(pos+Vector2(6+n*4,15),Vector2(3,2),Color("fff0b5"))
 			if g.gold_boxes.has(b.cell):g.item_icon(pos+Vector2(4,2),19,12)

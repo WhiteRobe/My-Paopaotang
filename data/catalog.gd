@@ -1,6 +1,6 @@
 extends RefCounted
 
-const THEMES = ["harbor", "forest", "frost", "desert", "volcano", "factory", "candy", "cosmos", "swamp", "ruins", "reef", "sky", "citadel"]
+const THEMES = ["harbor", "forest", "frost", "desert", "volcano", "factory", "candy", "cosmos", "swamp", "ruins", "reef", "sky", "citadel", "cave"]
 const MAPS = [
 	{"name":"晴日潮汐港", "theme":0, "rule":"tide", "seconds":150, "layout":0, "tip":"倒计时结束后，码头逐圈坍塌入海。"},
 	{"name":"双环航运站", "theme":0, "rule":"portal", "seconds":170, "layout":1, "tip":"两组传送环相连，出口被占用时无法通行。"},
@@ -21,9 +21,9 @@ const MAPS = [
 	{"name":"星轨天台", "theme":7, "rule":"gravity", "seconds":150, "layout":16, "tip":"低重力下跑得更快，但泡泡倒计时更长。"},
 	{"name":"陨星花园", "theme":7, "rule":"meteor", "seconds":160, "layout":17, "tip":"陨星落点提前标记，爆炸覆盖周围九格。"},
 	{"name":"蒸汽列车站", "theme":5, "rule":"train", "seconds":175, "layout":18, "tip":"列车周期穿过中间轨道，会把角色撞向邻格。"},
-	{"name":"雷雨萤火湾", "theme":1, "rule":"storm", "seconds":180, "layout":19, "tip":"雷电会瞄准角色，警示出现后及时离开。"},
-	{"name":"萤灯浅滩","theme":8,"rule":"mud","seconds":180,"layout":20,"tip":"泥潭使人减速，踏石通道可快速穿过。"},
-	{"name":"毒蕈小径","theme":8,"rule":"poison","seconds":190,"layout":21,"tip":"毒蕈先闪光再喷出毒雾，注意离开孢子区。"},
+	{"name":"雷雨萤火湾", "daynight":true, "fog":true, "theme":1, "rule":"storm", "seconds":180, "layout":19, "tip":"雷电会瞄准角色，警示出现后及时离开。"},
+	{"name":"萤灯浅滩","daynight":true,"theme":8,"rule":"mud","seconds":180,"layout":20,"tip":"泥潭使人减速，踏石通道可快速穿过。"},
+	{"name":"毒蕈小径","fog":true,"theme":8,"rule":"poison","seconds":190,"layout":21,"tip":"毒蕈先闪光再喷出毒雾，注意离开孢子区。"},
 	{"name":"旋叶营地","theme":8,"rule":"geyser","seconds":200,"layout":22,"tip":"喷泉周期把附近泡泡抛向两格外，改变爆炸位置。"},
 	{"name":"苔冠王庭","theme":8,"rule":"poison","seconds":210,"layout":23,"tip":"毒蕈先闪光再喷出毒雾，注意离开孢子区。"},
 	{"name":"镜光门廊","theme":9,"rule":"mirror","seconds":180,"layout":24,"tip":"棱镜让水柱转弯，预警会显示折射后的路径。"},
@@ -41,7 +41,11 @@ const MAPS = [
 	{"name":"墨潮外城","theme":12,"rule":"blackout","seconds":180,"layout":36,"tip":"灯塔周期熄灭；仍能看见自己的位置与危险标记。"},
 	{"name":"暗灯街区","theme":12,"rule":"blackout","seconds":190,"layout":37,"tip":"灯塔周期熄灭；仍能看见自己的位置与危险标记。"},
 	{"name":"机关兵工厂","theme":12,"rule":"turrets","seconds":200,"layout":38,"tip":"炮台交替瞄准横行与纵列，亮线为射击预警。"},
-	{"name":"核心王座","theme":12,"rule":"echo","seconds":210,"layout":39,"tip":"王座反射爆炸回声，离开原水柱后仍要留心二次冲击。"}
+	{"name":"核心王座","theme":12,"rule":"echo","seconds":210,"layout":39,"tip":"王座反射爆炸回声，离开原水柱后仍要留心二次冲击。"},
+	{"name":"火炬岩窟","theme":13,"rule":"cave","seconds":190,"layout":40,"night":true,"tip":"洞窟常年黑夜，随机火把提供稳定视野。照明弹可照亮全图。"},
+	{"name":"迷雾矿道","theme":13,"rule":"cavefog","seconds":200,"layout":41,"night":true,"fog":true,"tip":"浓雾周期覆盖矿道，风会暂时吹散雾气。手持火把能扩大视野。"},
+	{"name":"地下暗河","theme":13,"rule":"flow","seconds":195,"layout":42,"night":true,"tip":"暗河水流推动角色，沿火把探索通道。泡泡爆炸前逐渐发亮。"},
+	{"name":"蝠影回音厅","theme":13,"rule":"echo","seconds":210,"layout":43,"night":true,"tip":"蝙蝠飞过钟乳石洞厅。爆炸留下回声，火把和照明弹帮助观察退路。"}
 ]
 const ITEMS = [
 	{"name":"空", "kind":"none", "tip":"炸箱子或抢中央补给。", "color":"a9b8ca"},
@@ -69,17 +73,19 @@ const ITEMS = [
 	{"name":"雷鸣核心","kind":"active","tip":"泡泡释放电弧，跳向附近敌人与泡泡。 持续二十秒。","color":"c9b0ff"},
 	{"name":"藤蔓核心","kind":"active","tip":"泡泡留下短暂藤蔓区，使敌人减速。 持续二十秒。","color":"a8eca5"},
 	{"name":"净化核心","kind":"active","tip":"泡泡可救援队友并提供短暂保护。 持续二十秒。","color":"ffb5d1"},
-	{"name":"穿透核心","kind":"active","tip":"水柱可穿过每个方向的第一只箱子。 持续二十秒。","color":"ffe9a3"}
+	{"name":"穿透核心","kind":"active","tip":"水柱可穿过每个方向的第一只箱子。 持续二十秒。","color":"ffe9a3"},
+	{"name":"照明弹","kind":"active","tip":"全图照亮八秒，并驱散可视雾气，适用于夜晚、洞窟与雾天。","color":"fff0b3"},
+	{"name":"火把","kind":"active","tip":"二十秒内扩大自身视野，照穿附近的黑暗与雾气。","color":"ffbe7a"}
 ]
 const CHARACTERS = [
-	{"name":"蓝莓", "color":"62ceff", "style":0, "unlock":0, "perk":"均衡型，开局带护盾。"},
-	{"name":"桃桃", "color":"ff8bad", "style":1, "unlock":0, "perk":"开局护盾并额外一格水柱。"},
-	{"name":"薄荷", "color":"8bf2be", "style":2, "unlock":3, "perk":"开局一级成长跑鞋。"},
-	{"name":"柚子", "color":"ffcf6c", "style":3, "unlock":5, "perk":"开局可同时放三个泡泡。"},
-	{"name":"雪球", "color":"d3e9ff", "style":4, "unlock":8, "perk":"开局一级泡泡强化。"},
-	{"name":"星芽", "color":"baa2ff", "style":5, "unlock":11, "perk":"开局携带吸宝磁铁。"},
-	{"name":"机仔", "color":"88d6d8", "style":6, "unlock":15, "perk":"开局携带飞踢靴。"},
-	{"name":"火苗", "color":"ff9570", "style":7, "unlock":20, "perk":"开局一级骑术成长。"}
+	{"name":"蓝莓", "color":"62ceff", "style":0, "unlock":0, "perk":"开局 1 颗泡泡、1 格水柱；能力靠局内成长。"},
+	{"name":"桃桃", "color":"ff8bad", "style":1, "unlock":0, "perk":"开局 1 颗泡泡、1 格水柱；能力靠局内成长。"},
+	{"name":"薄荷", "color":"8bf2be", "style":2, "unlock":3, "perk":"开局 1 颗泡泡、1 格水柱；能力靠局内成长。"},
+	{"name":"柚子", "color":"ffcf6c", "style":3, "unlock":5, "perk":"开局 1 颗泡泡、1 格水柱；能力靠局内成长。"},
+	{"name":"雪球", "color":"d3e9ff", "style":4, "unlock":8, "perk":"开局 1 颗泡泡、1 格水柱；能力靠局内成长。"},
+	{"name":"星芽", "color":"baa2ff", "style":5, "unlock":11, "perk":"开局 1 颗泡泡、1 格水柱；能力靠局内成长。"},
+	{"name":"机仔", "color":"88d6d8", "style":6, "unlock":15, "perk":"开局 1 颗泡泡、1 格水柱；能力靠局内成长。"},
+	{"name":"火苗", "color":"ff9570", "style":7, "unlock":20, "perk":"开局 1 颗泡泡、1 格水柱；能力靠局内成长。"}
 ]
 const MOUNTS = [
 	{"name":"无坐骑", "tip":"寻找坐骑蛋。", "color":"ffffff"},

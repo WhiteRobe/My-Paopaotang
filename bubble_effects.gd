@@ -27,15 +27,17 @@ func update(dt):
 		for field in vines:
 			if field.cell==p.cell and hostile(p,field.owner):p.slow=maxf(p.slow,.3)
 		for f in g.blasts:
-			if f.get("element",0)==5 and f.cell==p.cell and not hostile(p,f.owner):
-				p.trap=0;p.grace=maxf(p.grace,.5);p.shield=maxf(p.shield,1.2)
+			if f.get("element",0)==5 and f.cell==p.cell and f.owner>=0 and (f.owner==p.id or g.players[f.owner].team==p.team):
+				if p.trap>0:g.release_player(p)
+				p.grace=maxf(p.grace,.5);p.shield=maxf(p.shield,1.2)
 func hostile(p,owner):
 	if owner<0:return true
 	return owner==p.id or g.players[owner].team!=p.team
 func affect_player(p,f):
 	var element=f.get("element",0)
 	if element==5 and f.owner>=0 and (f.owner==p.id or g.players[f.owner].team==p.team):
-		p.trap=0;p.grace=maxf(p.grace,.5);p.shield=maxf(p.shield,1.2);return
+		if p.trap>0:g.release_player(p)
+		p.grace=maxf(p.grace,.5);p.shield=maxf(p.shield,1.2);return
 	if not hostile(p,f.owner):return
 	if element==1:p.freeze=maxf(p.freeze,1.1)
 	elif element==3:p.slow=maxf(p.slow,1.5)

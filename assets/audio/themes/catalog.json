@@ -89,5 +89,12 @@
     "bpm": 122,
     "seconds": 125.9,
     "file": "citadel.ogg"
+  },
+  {
+    "theme": "cave",
+    "title": "洞窟：火炬回声",
+    "bpm": 86,
+    "seconds": 178.6,
+    "file": "cave.ogg"
   }
 ]

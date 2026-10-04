@@ -20,6 +20,7 @@ THEMES = [
     ('reef','深海：珊瑚梦境',84,64,'major','bell',[2,4,6,4,5,3,2,0]),
     ('sky','空港：风帆航线',118,62,'major','pluck',[0,2,5,4,6,5,3,1]),
     ('citadel','王城：归航之光',122,50,'minor','pulse',[0,2,4,6,5,3,2,0]),
+    ('cave','洞窟：火炬回声',86,48,'minor','bell',[0,4,2,6,3,1,5,0]),
 ]
 SCALES = {'major':[0,2,4,5,7,9,11], 'minor':[0,2,3,5,7,8,10], 'dorian':[0,2,3,5,7,9,10], 'harmonic':[0,1,4,5,7,8,11]}
 def hz(n): return 440 * 2 ** ((n-69)/12)
@@ -82,13 +83,16 @@ def render(spec):
         for tick in range(4):
             add(start+tick*beat,beat*.7,pitch(chord,-1)+(12 if tick%2 else 0),.17,'tri',0)
             if section!=4 or tick%2==0:drum(start+tick*beat,'kick',.17)
-            if tick%2 and key not in ['forest','frost','cosmos']:drum(start+tick*beat,'snare',.085)
-            if key not in ['frost','cosmos']:drum(start+(tick+.5)*beat,'hat',.042)
+            if tick%2 and key not in ['forest','frost','cosmos','cave']:drum(start+tick*beat,'snare',.085)
+            if key not in ['frost','cosmos','cave']:drum(start+(tick+.5)*beat,'hat',.042)
         if section in [1,3,5,7]:
             for tick in range(4):
                 add(start+(tick+.25)*beat,beat*.2,pitch(chord+[0,2,4,2][tick],1),.055,'bell',-.65)
         if bar%8==7 and key in ['volcano','factory','candy']:
             for tick in range(4):drum(start+(3+tick*.25)*beat,'snare',.045)
+    if key=='cave':
+        for delay,gain in [(.18,.16),(.37,.10),(.61,.05)]:
+            count=round(delay*SR);mix[count:]+=mix[:-count,::-1]*gain
     # Gentle saturation and normalization leave headroom for gameplay effects.
     mix=np.tanh(mix*1.2)
     mix*=.8/max(.8,float(np.max(np.abs(mix))))

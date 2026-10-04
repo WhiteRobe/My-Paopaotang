@@ -1,31 +1,34 @@
 extends Node2D
 
+var hero_palette
+const HDArt=preload("res://hd_art.gd")
+const MenuUI=preload("res://menu_ui.gd")
 const Catalog = preload("res://data/catalog.gd")
+const Weather=preload("res://weather.gd")
+const I18n=preload("res://i18n.gd")
+const DynamicLighting=preload("res://dynamic_lighting.gd")
+const Encyclopedia=preload("res://encyclopedia.gd")
 const Adventure=preload("res://adventure.gd")
 const MapMechanisms=preload("res://map_mechanisms.gd")
 const BubbleEffects=preload("res://bubble_effects.gd")
 const Crates=preload("res://crates.gd")
 const WorldEffects=preload("res://world_effects.gd")
-const MAP_COUNT=40
-const W = 21
-const H = 15
-const TILE = 18
-const ORIGIN = Vector2(130, 74)
+const MAP_COUNT=44
+const W = 27
+const H = 19
+const TILE = 16
+const ORIGIN = Vector2(104, 50)
 const DIRS = [Vector2i.LEFT,Vector2i.RIGHT,Vector2i.UP,Vector2i.DOWN]
-const SPAWNS = [Vector2i(1,1),Vector2i(19,1),Vector2i(1,13),Vector2i(19,13)]
+const SPAWNS = [Vector2i(1,1),Vector2i(1,H-2),Vector2i(1,H/2),Vector2i(W/2,1),Vector2i(W-2,H-2),Vector2i(W-2,1),Vector2i(W-2,H/2),Vector2i(W/2,H-2)]
 const INK = Color("182840")
 const CREAM = Color("fff5d5")
-const COLORS = [Color("62ceff"),Color("ff8bad"),Color("ffe18a"),Color("a8efac")]
+const COLORS = [Color("62ceff"),Color("ff8bad"),Color("ffe18a"),Color("a8efac"),Color("c3a2ff"),Color("ffad64"),Color("58e1c0"),Color("ed9ee6")]
 const MOVE_KEYS = [[KEY_A,KEY_D,KEY_W,KEY_S],[KEY_LEFT,KEY_RIGHT,KEY_UP,KEY_DOWN],[KEY_J,KEY_L,KEY_I,KEY_K],[KEY_F,KEY_H,KEY_T,KEY_G]]
 const BOMB_KEYS = [KEY_SPACE,KEY_ENTER,KEY_U,KEY_R]
 const ITEM_KEYS = [KEY_Q,KEY_SLASH,KEY_O,KEY_Y]
 const CONTROL_NAMES = ["WASD / 空格 / Q","方向键 / 回车 / /","IJKL / U / O","TFGH / R / Y"]
-const MODES = ["单人闯关","自由混战","双人组队 2v2","剧情冒险 PVE"]
+const MODES = ["单人闯关","自由混战","组队对战","剧情冒险 PVE"]
 var font = preload("res://assets/fonts/pixel_font.tres")
-var tiles = preload("res://assets/tiles.png")
-var item_art = preload("res://assets/items.png")
-var character_art = preload("res://assets/characters.png")
-var mount_art = preload("res://assets/mounts.png")
 var backgrounds: Array = []
 var rng = RandomNumberGenerator.new()
 var state = "menu"
@@ -43,8 +46,18 @@ var map_rules
 var world_fx
 var crates
 var bubble_fx
+var encyclopedia
+var i18n
+var language_selection=0
+var language_return="menu"
+var lighting
+var weather
 var pause_return="play"
 var chosen_characters = [0,1,0,1]
+var hd
+var frontend
+var music_volume=75
+var effects_volume=75
 var menu_row = 0
 var selection = 0
 var map_page = 0
@@ -76,7 +89,7 @@ var supply_time = 20.0
 var mechanism_time = 0.0
 var sudden_ring = -1
 var gate_open = false
-var scores = [0,0,0,0]
+var scores = [0,0,0,0,0,0,0,0]
 var round_index = 1
 var result_text = ""
 var result_winner = -1
@@ -93,21 +106,29 @@ var save_path = "user://profile.json"
 var profile: Dictionary = {}
 
 func default_profile():
-	return {"version":3,"adventure_stage":1,"adventure_cleared":0,"cleared":0,"stage":1,"muted":false,"chars":[0,1,0,1],"settings":{"mode":0,"humans":1,"seats":4,"map":-1,"companion":true,"teams":0},"stats":{"pve_stages":0,"monsters":0,"bosses":0,"rounds":0,"wins":0,"losses":0,"draws":0,"bombs":0,"crates":0,"items":0,"rescues":0,"mounts":0,"deaths":0,"abandoned":0,"seconds":0.0}}
+	return {"version":4,"locale":"zh","adventure_bonus":{},"adventure_stage":1,"adventure_cleared":0,"cleared":0,"stage":1,"muted":false,"chars":[0,1,0,1],"settings":{"mode":0,"humans":1,"seats":4,"map":-1,"companion":true,"teams":0,"music_volume":75,"effects_volume":75},"stats":{"secrets":0,"pve_stages":0,"monsters":0,"bosses":0,"rounds":0,"wins":0,"losses":0,"draws":0,"bombs":0,"crates":0,"items":0,"rescues":0,"mounts":0,"deaths":0,"abandoned":0,"seconds":0.0}}
 
 func _ready():
 	scale = Vector2(3,3)
 	font.base_font.antialiasing = TextServer.FONT_ANTIALIASING_NONE
 	rng.randomize()
+	hd=HDArt.new(self)
+	hero_palette=preload("res://hero_palette.gd").new(self)
 	adventure=Adventure.new(self)
 	map_rules=MapMechanisms.new(self)
 	world_fx=WorldEffects.new(self)
 	crates=Crates.new(self)
 	bubble_fx=BubbleEffects.new(self)
+	encyclopedia=Encyclopedia.new(self)
+	weather=Weather.new(self)
+	lighting=DynamicLighting.new(self)
+	i18n=I18n.new()
+	frontend=MenuUI.new(self)
 	load_profile()
+	i18n.set_language(profile.locale)
 	get_tree().auto_accept_quit = false
 	get_tree().root.close_requested.connect(close_game)
-	for theme in Catalog.THEMES: backgrounds.append(load("res://assets/background-"+theme+".png"))
+	for theme in Catalog.THEMES: backgrounds.append(load("res://assets/hd/landscape-"+theme+"-hd.png"))
 	music = AudioStreamPlayer.new()
 	music.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 	add_child(music)
@@ -119,6 +140,7 @@ func _ready():
 		speakers.append(speaker)
 	build_board(0)
 	play_theme(0)
+	apply_audio_settings()
 
 func load_profile():
 	profile = default_profile()
@@ -128,6 +150,8 @@ func load_profile():
 			profile.cleared = clampi(int(loaded.get("cleared",0)),0,20)
 			profile.stage = clampi(int(loaded.get("stage",1)),1,20)
 			profile.muted = bool(loaded.get("muted",false))
+			profile.locale=str(loaded.get("locale","zh"))
+			if loaded.get("adventure_bonus") is Dictionary:profile.adventure_bonus=loaded.adventure_bonus
 			profile.adventure_cleared=clampi(int(loaded.get("adventure_cleared",0)),0,20)
 			profile.adventure_stage=clampi(int(loaded.get("adventure_stage",1)),1,20)
 			if loaded.get("chars") is Array and loaded.chars.size()==4: profile.chars = loaded.chars
@@ -139,15 +163,18 @@ func load_profile():
 					if value is int or value is float: profile.stats[field] = maxf(0,float(value))
 	mode=clampi(int(profile.settings.mode),0,3)
 	humans=clampi(int(profile.settings.humans),1,4)
-	seats=clampi(int(profile.settings.seats),2,4)
+	seats=clampi(int(profile.settings.seats),2,8)
 	selected_map=clampi(int(profile.settings.map),-1,MAP_COUNT-1)
 	companion=bool(profile.settings.companion)
 	team_layout=clampi(int(profile.settings.teams),0,1)
 	if mode==0:humans=1
-	elif mode in [2,3]:seats=4
+	elif mode==2:seats=clampi(seats/2*2,4,8)
+	elif mode==3:seats=4
 	humans=mini(humans,seats)
 	campaign_stage = clampi(int(profile.stage),1,mini(20,int(profile.cleared)+1))
 	adventure_stage=clampi(int(profile.adventure_stage),1,mini(20,int(profile.adventure_cleared)+1))
+	music_volume=clampi(int(profile.settings.music_volume),0,100)
+	effects_volume=clampi(int(profile.settings.effects_volume),0,100)
 	muted = profile.muted
 	for i in range(4):
 		var index = clampi(int(profile.chars[i]),0,7)
@@ -156,15 +183,16 @@ func load_profile():
 func save_profile():
 	profile.muted = muted
 	profile.chars = chosen_characters.duplicate()
-	profile.settings={"mode":mode,"humans":humans,"seats":seats,"map":selected_map,"companion":companion,"teams":team_layout}
+	profile.settings={"mode":mode,"humans":humans,"seats":seats,"map":selected_map,"companion":companion,"teams":team_layout,"music_volume":music_volume,"effects_volume":effects_volume}
 	var file = FileAccess.open(save_path+".tmp",FileAccess.WRITE)
 	if file == null:
 		announce("存档失败，请检查目录权限。")
-		return
+		return false
 	file.store_string(JSON.stringify(profile,"\t"))
 	file.close()
 	var error = DirAccess.rename_absolute(ProjectSettings.globalize_path(save_path+".tmp"),ProjectSettings.globalize_path(save_path))
 	if error != OK: announce("存档写入失败。")
+	return error==OK
 
 func character_unlocked(index): return maxi(int(profile.get("cleared",0)),int(profile.get("adventure_cleared",0))) >= Catalog.CHARACTERS[index].unlock
 func stat(field,amount=1): profile.stats[field] = profile.stats.get(field,0) + amount
@@ -176,10 +204,14 @@ func play_theme(theme_index):
 	var stream = load("res://assets/audio/themes/"+name+".ogg") as AudioStreamOggVorbis
 	stream.loop = true
 	music.stream = stream
-	music.volume_db = -80 if muted else -12
+	music.volume_db = -80 if muted or music_volume==0 else -12+linear_to_db(music_volume/100.0)
 	if DisplayServer.get_name() != "headless": music.play()
+func apply_audio_settings():
+	if music:music.volume_db=-80 if muted or music_volume==0 else -12+linear_to_db(music_volume/100.0)
+	for speaker in speakers:speaker.volume_db=-80 if muted or effects_volume==0 else -13+linear_to_db(effects_volume/100.0)
+
 func sound(name):
-	if muted: return
+	if muted or effects_volume==0: return
 	var speaker = speakers[speaker_index % speakers.size()]
 	speaker_index += 1
 	speaker.stream = sounds[name]
@@ -189,7 +221,7 @@ func announce(message):
 	notice_time = 3.0
 
 func start_match():
-	scores = [0,0,0,0]
+	scores = [0,0,0,0,0,0,0,0]
 	round_index = 1
 	match_over = false
 	new_round()
@@ -209,6 +241,8 @@ func new_round():
 	drops.clear()
 	particles.clear()
 	world_fx.events.clear()
+	world_fx.links.clear()
+	world_fx.footsteps.clear()
 	bubble_fx.vines.clear()
 	decoys.clear()
 	hazards.clear()
@@ -227,28 +261,20 @@ func new_round():
 	notice_time = 0
 	result_winner = -1
 	round_recorded = false
-	var count = 4 if mode==2 else seats
+	var count = seats
 	if mode==0: count = 2 if campaign_stage<5 else 4
 	elif mode==3:count=4 if companion else humans
 	for i in range(count):
 		var team = i
 		if mode==3:team=0
-		elif mode==2: team = int(i/2) if team_layout==0 else i%2
+		elif mode==2: team = int(i/(count/2)) if team_layout==0 else i%2
 		elif mode==0: team = 0 if i==0 or (companion and count==4 and i==1) else 1
 		var bot = i >= humans or (mode==0 and i>0)
-		var character = chosen_characters[i]
+		var character = chosen_characters[i] if i<4 else 0
 		if mode==0 and i>0: character = (campaign_stage+i)%8
 		elif bot: character = (arena+i*3)%8
-		var c = SPAWNS[i]
-		var p = {"id":i,"team":team,"bot":bot,"character":character,"cell":c,"visual":Vector2(c),"from":Vector2(c),"move":1.0,"cool":0.0,"duration":0.15,"pickup_lock":Vector2i(-1,-1),"range":2,"capacity":2,"speed":0,"power":0,"riding":0,"item":1,"element":0,"element_time":0.0,"shield":0.0,"dash":0.0,"kick":0.0,"cloak":0.0,"magnet":0.0,"freeze":0.0,"slow":0.0,"trap":0.0,"grace":0.0,"warp":0.0,"flow":0.0,"think":0.0,"attack":0.0,"ai_dir":Vector2i.ZERO,"facing":Vector2i.DOWN,"steps":0,"dead":false,"mount":0,"mount_hp":0,"jump":0.0,"coins":0,"last_cell":c,"score":0}
-		match character:
-			1: p.range = 3
-			2: p.speed = 1
-			3: p.capacity = 3
-			4: p.power = 1
-			5: p.item = 14
-			6: p.item = 6
-			7: p.riding = 1
+		var c = round_spawns(count)[i]
+		var p = {"id":i,"team":team,"bot":bot,"character":character,"cell":c,"visual":Vector2(c),"from":Vector2(c),"move":1.0,"cool":0.0,"duration":0.15,"momentum":0.0,"velocity":Vector2.ZERO,"gait":0.0,"bubble_pass":Vector2i(-1,-1),"push_cool":0.0,"drift":Vector2.ZERO,"motion_dir":Vector2i.ZERO,"starting":true,"pickup_lock":Vector2i(-1,-1),"range":1,"capacity":1,"speed":0,"power":0,"riding":0,"item":0,"element":0,"element_time":0.0,"hurt":0.0,"placing":0.0,"down":0.0,"pop_time":0.0,"pop_row":0,"trapped_elapsed":0.0,"recoil":Vector2.ZERO,"torch":0.0,"shield":0.0,"dash":0.0,"kick":0.0,"cloak":0.0,"magnet":0.0,"freeze":0.0,"slow":0.0,"trap":0.0,"grace":0.0,"warp":0.0,"flow":0.0,"think":0.0,"attack":0.0,"ai_dir":Vector2i.ZERO,"facing":Vector2i.DOWN,"steps":0,"dead":false,"mount":0,"mount_hp":0,"jump":0.0,"coins":0,"last_cell":c,"score":0}
 		if mode==0 and bot and team==1:
 			p.speed=mini(3,p.speed+int(campaign_stage/8))
 			p.capacity=mini(5,p.capacity+int(campaign_stage/10))
@@ -259,6 +285,16 @@ func new_round():
 	if mode==3:
 		adventure.setup()
 		crates.setup()
+	weather.setup()
+
+func round_spawns(count):
+	var result=[]
+	for i in range(count):
+		var index=[0,4,1,5,2,6,3,7][i]
+		if mode==2:index=(i/(count/2) if team_layout==0 else i%2)*4+(i%(count/2) if team_layout==0 else i/2)
+		elif mode==0 and count==4:index=[0,1,4,5][i]
+		result.append(SPAWNS[index])
+	return result
 
 func rule(): return Catalog.MAPS[arena].rule
 func inside(c): return c.x>=0 and c.y>=0 and c.x<W and c.y<H
@@ -269,7 +305,7 @@ func bomb_at(c):
 	return null
 func occupied(c,ignore=-1):
 	for p in players:
-		if p.id!=ignore and not p.dead and p.cell==c: return p
+		if p.id!=ignore and not p.dead and absf(p.visual.x-c.x)<.75 and absf(p.visual.y-c.y)<.75: return p
 	return null
 func passable(c,p=null):
 	if not inside(c) or grid[c.y][c.x] in [1,3]: return false
@@ -291,35 +327,38 @@ func build_board(index):
 	for y in range(H):
 		var row: Array = []
 		for x in range(W):
+			var sx=x;var sy=y
+			if x>0 and x<W-1:sx=clampi(roundi(x*20.0/(W-1)),1,19)
+			if y>0 and y<H-1:sy=clampi(roundi(y*14.0/(H-1)),1,13)
 			var wall = x==0 or y==0 or x==W-1 or y==H-1
 			if not wall:
 				match (layout%10 if arena<20 else (layout+10)%20):
-					0: wall = x%2==0 and y%2==0
-					1: wall = y in [3,9] and x in [3,4,6,7,11,12,14,15]
-					2: wall = x%4==0 and y not in [1,6,11]
-					3: wall = (x+y)%5==0 and x>2 and x<16
-					4: wall = y%3==0 and x not in [1,5,9,13,17]
-					5: wall = x in [4,14] and y in [3,4,8,9]
-					6: wall = (x%4==2 and y%3==0)
-					7: wall = (x in [5,13] and y in [3,4,5,7,8,9]) or (y in [3,9] and x in [6,7,11,12])
-					8: wall = abs(x-9)+abs(y-6) in [4,8] and x%3!=0 and y%3!=0
-					9: wall = (x in [3,7,11,15] and y in [3,5,7,9])
-					10: wall = x in [5,15] and y not in [2,7,12]
-					11: wall = y in [4,10] and x%5 not in [0,1]
-					12: wall = (x+y)%6==0 and y not in [2,12]
-					13: wall = abs(x-10)+abs(y-7)==6 and x%4!=2
-					14: wall = (x%4==0 and y%4==0) or (x%4==1 and y%4==1)
-					15: wall = y in [3,11] and x not in [2,6,10,14,18]
-					16: wall = x in [4,8,12,16] and y in [4,5,9,10]
-					17: wall = (x-10)*(x-10)+(y-7)*(y-7) in range(23,29) and x%3!=0
-					18: wall = (x%5==0 and y%3!=1) or (y%5==0 and x%3==1)
-					19: wall = (x in [6,14] and y in [2,3,4,10,11,12]) or (y in [5,9] and x in [8,9,11,12])
+					0: wall = sx%2==0 and sy%2==0
+					1: wall = sy in [3,9] and sx in [3,4,6,7,11,12,14,15]
+					2: wall = sx%4==0 and sy not in [1,6,11]
+					3: wall = (sx+sy)%5==0 and sx>2 and sx<16
+					4: wall = sy%3==0 and sx not in [1,5,9,13,17]
+					5: wall = sx in [4,14] and sy in [3,4,8,9]
+					6: wall = (sx%4==2 and sy%3==0)
+					7: wall = (sx in [5,13] and sy in [3,4,5,7,8,9]) or (sy in [3,9] and sx in [6,7,11,12])
+					8: wall = abs(sx-9)+abs(sy-6) in [4,8] and sx%3!=0 and sy%3!=0
+					9: wall = (sx in [3,7,11,15] and sy in [3,5,7,9])
+					10: wall = sx in [5,15] and sy not in [2,7,12]
+					11: wall = sy in [4,10] and sx%5 not in [0,1]
+					12: wall = (sx+sy)%6==0 and sy not in [2,12]
+					13: wall = abs(sx-10)+abs(sy-7)==6 and sx%4!=2
+					14: wall = (sx%4==0 and sy%4==0) or (sx%4==1 and sy%4==1)
+					15: wall = sy in [3,11] and sx not in [2,6,10,14,18]
+					16: wall = sx in [4,8,12,16] and sy in [4,5,9,10]
+					17: wall = (sx-10)*(sx-10)+(sy-7)*(sy-7) in range(23,29) and sx%3!=0
+					18: wall = (sx%5==0 and sy%3!=1) or (sy%5==0 and sx%3==1)
+					19: wall = (sx in [6,14] and sy in [2,3,4,10,11,12]) or (sy in [5,9] and sx in [8,9,11,12])
 			var cell = 1 if wall else (2 if map_rng.randf()<(.35 if arena%3 else .45) else 0)
 			row.append(cell)
 		grid.append(row)
 	# All maps have routes through the middle and symmetrical corner exits.
-	for x in range(1,W-1): grid[7][x]=0
-	for y in range(1,H-1): grid[y][10]=0
+	for x in range(1,W-1): grid[H/2][x]=0
+	for y in range(1,H-1): grid[y][W/2]=0
 	for c in SPAWNS:
 		for y in range(maxi(1,c.y-2),mini(H-1,c.y+3)):
 			for x in range(maxi(1,c.x-2),mini(W-1,c.x+3)):
@@ -335,7 +374,7 @@ func build_board(index):
 					clear_patch(c)
 					terrain[c]={"type":"portal","exit":pair[1] if c==pair[0] else pair[0]}
 		"flow":
-			for x in range(2,W-2): terrain[Vector2i(x,7)]={"type":"flow","dir":Vector2i.RIGHT if x<10 else Vector2i.LEFT}
+			for x in range(2,W-2): terrain[Vector2i(x,H/2)]={"type":"flow","dir":Vector2i.RIGHT if x<W/2 else Vector2i.LEFT}
 		"mushroom","spring":
 			for c in [Vector2i(5,4),Vector2i(13,8),Vector2i(5,8),Vector2i(13,4),Vector2i(10,7)]:
 				clear_patch(c)
@@ -371,12 +410,16 @@ func build_board(index):
 			for y in [3,6,9]:
 				for x in range(1,W-1): grid[y][x]=0
 		"train":
-			for x in range(1,W-1): terrain[Vector2i(x,7)]={"type":"rail"}
+			for x in range(1,W-1): terrain[Vector2i(x,H/2)]={"type":"rail"}
 	for c in [Vector2i(10,7),Vector2i(7,6),Vector2i(11,6)]:
 		if grid[c.y][c.x]==0: terrain[c]=terrain.get(c,{"type":"supply"})
 
 	if map_rules:map_rules.setup()
+	for c in SPAWNS:
+		clear_patch(c)
+		for d in [Vector2i.ZERO]+DIRS:terrain.erase(c+d)
 	if crates:crates.setup()
+	if weather:weather.setup()
 
 func clear_patch(c):
 	for d in [Vector2i.ZERO]+DIRS:
@@ -386,37 +429,24 @@ func clear_patch(c):
 func _unhandled_key_input(event):
 	if not event.pressed or event.echo: return
 	var key = event.keycode
+	if state=="languages":
+		if key in [KEY_ESCAPE,KEY_F3]:state=language_return
+		elif key in [KEY_UP,KEY_DOWN]:language_selection=posmod(language_selection+(-1 if key==KEY_UP else 1),5)
+		elif key in [KEY_ENTER,KEY_SPACE]:apply_language(language_selection);state=language_return
+		return
+	if key==KEY_F3:
+		language_return=state;state="languages";language_selection=I18n.LOCALES.find(i18n.locale);return
+	if state=="codex":encyclopedia.input_key(key);return
+	if key==KEY_F2:encyclopedia.open();return
 	if key==KEY_M:
 		muted=not muted
-		music.volume_db=-80 if muted else -12
+		apply_audio_settings()
 		save_profile()
 		return
-	if state=="menu":
-		if key==KEY_UP: menu_row=posmod(menu_row-1,6)
-		elif key==KEY_DOWN: menu_row=(menu_row+1)%6
-		elif key in [KEY_LEFT,KEY_RIGHT]: adjust_menu(-1 if key==KEY_LEFT else 1)
-		elif key==KEY_TAB:
-			if mode in [0,3]:mode=1
-			selected_map=posmod(selected_map+1,MAP_COUNT)
-			refresh_preview()
-		elif key==KEY_R:
-			if mode in [0,3]:mode=1
-			selected_map=-1
-			refresh_preview()
-		elif key==KEY_C:
-			character_slot=0
-			selection=chosen_characters[0]
-			state="characters"
-		elif key==KEY_B: state="stats"
-		elif key==KEY_V:
-			selection=maxi(0,selected_map)
-			state="maps"
-		elif key==KEY_F1: state="help"
-		elif key in [KEY_ENTER,KEY_SPACE]: start_match()
-		return
+	if frontend.active():frontend.input_key(key);return
 	if state in ["stats","help","maps","characters"]:
 		if key==KEY_ESCAPE:
-			state="menu"
+			frontend.back()
 			refresh_preview()
 			return
 		if state=="maps":
@@ -426,15 +456,17 @@ func _unhandled_key_input(event):
 			elif key==KEY_DOWN: selection=(selection+4)%MAP_COUNT
 			elif key==KEY_ENTER:
 				selected_map=selection
-				if mode in [0,3]:mode=1
-				state="menu"
+				frontend.back()
 				refresh_preview()
+				save_profile()
 			elif key==KEY_R:
 				selected_map=-1
-				state="menu"
+				frontend.back()
+				refresh_preview()
+				save_profile()
 		elif state=="characters":
 			if key==KEY_TAB:
-				character_slot=(character_slot+1)%4
+				character_slot=(character_slot+1)%humans
 				selection=chosen_characters[character_slot]
 			elif key==KEY_LEFT: selection=posmod(selection-1,8)
 			elif key==KEY_RIGHT: selection=(selection+1)%8
@@ -486,18 +518,18 @@ func _unhandled_key_input(event):
 			else:use_item(i)
 
 func _unhandled_input(event):
+	if event is InputEventMouseMotion and frontend.active():frontend.hover(event.position/3);return
 	if not event is InputEventMouseButton or not event.pressed or event.button_index!=MOUSE_BUTTON_LEFT: return
 	var pos=event.position/3
-	if state=="menu":
-		if Rect2(22,300,254,28).has_point(pos): start_match()
-		elif Rect2(290,304,102,24).has_point(pos): state="maps"; selection=maxi(0,selected_map)
-		elif Rect2(400,304,102,24).has_point(pos): state="characters"; selection=chosen_characters[0]
-		elif Rect2(510,304,106,24).has_point(pos): state="stats"
-		elif pos.x<280 and pos.y>=151 and pos.y<295:
-			menu_row=clampi(int((pos.y-151)/24),0,5)
-			adjust_menu(1)
-	elif state=="story":adventure.advance_dialogue()
-	elif state=="play" and Rect2(528,309,92,20).has_point(pos):
+	if state=="languages":
+		for index in range(5):
+			if Rect2(190,96+index*40,260,32).has_point(pos):apply_language(index);state=language_return;return
+		if Rect2(540,10,80,22).has_point(pos):state=language_return
+		return
+	if state=="codex":encyclopedia.input_mouse(pos);return
+	if frontend.active():frontend.input_mouse(pos);return
+	if state=="story":adventure.advance_dialogue()
+	elif state=="play" and Rect2(549,315,78,25).has_point(pos):
 		pause_return="play";state="pause"; paused=true; quit_selection=0
 	elif state=="pause":
 		for i in range(3):
@@ -507,38 +539,21 @@ func _unhandled_input(event):
 			var key=InputEventKey.new();key.keycode=KEY_ENTER;key.pressed=true;_unhandled_key_input(key)
 		elif Rect2(195,248,250,25).has_point(pos): return_to_menu()
 	elif state in ["stats","help","maps","characters"] and Rect2(540,10,80,22).has_point(pos):
-		state="menu";refresh_preview()
+		frontend.back();refresh_preview()
 	elif state=="maps":
 		for slot in range(20):
 			if Rect2(12+(slot%4)*156,45+int(slot/4)*56,147,52).has_point(pos):
-				selection=int(selection/20)*20+slot;selected_map=selection;mode=1 if mode in [0,3] else mode;state="menu";refresh_preview();break
-		if pos.y>=328 and pos.y<=358 and pos.x<120:selection=posmod(selection-20,MAP_COUNT)
-		elif pos.y>=328 and pos.y<=358 and pos.x>520:selection=posmod(selection+20,MAP_COUNT)
+				if int(selection/20)*20+slot>=MAP_COUNT:continue
+				selection=int(selection/20)*20+slot;selected_map=selection;frontend.back();refresh_preview();save_profile();break
+		if pos.y>=328 and pos.y<=358 and pos.x<120:selection=posmod(int(selection/20)-1,int(ceil(MAP_COUNT/20.0)))*20
+		elif pos.y>=328 and pos.y<=358 and pos.x>520:selection=posmod(int(selection/20)+1,int(ceil(MAP_COUNT/20.0)))*20
 	elif state=="characters":
+		for slot in range(humans):
+			if Rect2(32+slot*75,68,65,18).has_point(pos):character_slot=slot;selection=chosen_characters[slot];return
 		for i in range(8):
 			if Rect2(32+i*75,92,65,86).has_point(pos): selection=i
 		if Rect2(240,283,160,28).has_point(pos) and character_unlocked(selection):
 			chosen_characters[character_slot]=selection;save_profile();sound("pickup")
-
-func adjust_menu(direction):
-	match menu_row:
-		0: mode=posmod(mode+direction,4)
-		1:
-			if mode==3:adventure_stage=clampi(adventure_stage+direction,1,mini(20,int(profile.adventure_cleared)+1))
-			elif mode==0: campaign_stage=clampi(campaign_stage+direction,1,mini(20,int(profile.cleared)+1))
-			else: selected_map=posmod(selected_map+1+direction,MAP_COUNT+1)-1
-		2: humans=clampi(humans+direction,1,4)
-		3: seats=clampi(seats+direction,2,4)
-		4:
-			if mode in [0,3]:companion=not companion
-			elif mode==2:team_layout=1-team_layout
-		5:
-			chosen_characters[0]=next_character(chosen_characters[0],direction)
-			save_profile()
-	if mode==0: humans=1
-	elif mode in [2,3]: seats=4
-	humans=mini(humans,seats)
-	refresh_preview()
 
 func next_character(value,direction):
 	for i in range(8):
@@ -557,14 +572,24 @@ func return_to_menu():
 		stat("abandoned")
 		round_recorded=true
 	save_profile()
-	state="menu"
+	state="lobby"
+	frontend.row=0
 	paused=false
 	players.clear()
 	refresh_preview()
 
 func _process(dt):
+	if state=="pause":
+		if lighting:lighting.update(0)
+		queue_redraw()
+		return
 	elapsed+=dt
+	if mode==3 and state in ["play","result"]:adventure.update_animation(dt)
+	if state=="result":
+		for p in players:
+			for timer in ["hurt","placing","down","pop_time"]:p[timer]=maxf(0,p[timer]-dt)
 	if world_fx:world_fx.update(dt)
+	if lighting:lighting.update(dt)
 	shake=maxf(0,shake-dt*18)
 	if state=="play":
 		if countdown>0: countdown-=dt
@@ -579,6 +604,7 @@ func _process(dt):
 func update_game(dt):
 	round_time+=dt
 	clock_time-=dt
+	weather.update(dt)
 	for effect in pickup_effects:effect.life-=dt
 	pickup_effects=pickup_effects.filter(func(effect):return effect.life>0)
 	stat("seconds",dt)
@@ -593,38 +619,44 @@ func update_game(dt):
 	update_mechanisms(dt)
 	var danger=danger_cells()
 	for p in players:
-		for timer in ["shield","dash","kick","cloak","magnet","freeze","slow","grace","warp","flow","think","jump","attack"]: p[timer]=maxf(0,p[timer]-dt)
+		for timer in ["hurt","placing","down","pop_time","torch","shield","dash","kick","cloak","magnet","freeze","slow","grace","warp","flow","think","jump","attack","push_cool"]: p[timer]=maxf(0,p[timer]-dt)
 		p.cool=maxf(0,p.cool-dt)
-		p.move=minf(1,p.move+dt/p.duration)
-		p.visual=p.from.lerp(Vector2(p.cell),p.move)
-		if p.dead: continue
+		if p.dead:p.velocity=Vector2.ZERO;p.move=1;continue
 		if p.cloak<=0 and grid[p.cell.y][p.cell.x]==2: eject_from_box(p)
 		if p.trap>0:
-			p.trap-=dt
+			p.velocity=Vector2.ZERO;p.move=1
+			p.trap-=dt;p.trapped_elapsed+=dt
 			if p.bot and p.item in [1,9,18]: use_item(p.id)
 			if p.trap<=0 and p.grace<=0: kill_player(p)
 			continue
-		if p.freeze>0: continue
-		var dir=Vector2i.ZERO
+		if p.freeze>0:
+			p.velocity=Vector2.ZERO;p.move=1
+			for f in blasts:
+				if f.cell==p.cell and f.time>0:bubble_fx.affect_player(p,f)
+			continue
+		var dir=Vector2.ZERO
 		if p.bot:
 			if p.think<=0:
 				p.think=.14 if mode!=0 else maxf(.11,.28-campaign_stage*.008)
 				p.ai_dir=bot_direction(p,danger)
 				bot_actions(p,danger)
-			dir=p.ai_dir
+			dir=Vector2(p.ai_dir)
+			# Bot routes still use tile centres, but position and collision are continuous.
+			if dir.x!=0:dir.y=clampf(roundf(p.visual.y)-p.visual.y,-.8,.8)*4
+			elif dir.y!=0:dir.x=clampf(roundf(p.visual.x)-p.visual.x,-.8,.8)*4
 		else:
 			for d in range(4):
-				if Input.is_physical_key_pressed(MOVE_KEYS[p.id][d]):dir=DIRS[d];break
-		if terrain.has(p.cell) and p.flow<=0:
+				if Input.is_physical_key_pressed(MOVE_KEYS[p.id][d]):dir+=Vector2(DIRS[d])
+		if terrain.has(p.cell):
 			var tile=terrain[p.cell]
-			if tile.type=="flow":dir=tile.dir;p.flow=.4
-			elif tile.type=="ice" and dir==Vector2i.ZERO and p.facing!=Vector2i.ZERO:dir=p.facing
-		if rule()=="wind" and fmod(round_time,9)>7.5 and p.flow<=0:
-			dir=DIRS[int(round_time/9)%4];p.flow=.5
-		if dir!=Vector2i.ZERO and p.move>=1: try_move(p,dir)
+			if tile.type=="flow":dir=tile.dir
+			elif tile.type=="ice" and dir==Vector2.ZERO and p.facing!=Vector2i.ZERO:dir=p.facing
+		if rule()=="wind" and fmod(round_time,9)>7.5:
+			dir=DIRS[int(round_time/9)%4]
+		move_player(p,dir,dt)
 		apply_terrain(p)
 		if p.pickup_lock!=p.cell:p.pickup_lock=Vector2i(-1,-1)
-		if p.move>=.65 and drops.has(p.cell): pickup(p,p.cell)
+		if drops.has(p.cell): pickup(p,p.cell)
 		if p.magnet>0:
 			for c in drops.keys():
 				if manhattan(c,p.cell)<=2: pickup(p,c)
@@ -662,7 +694,7 @@ func update_game(dt):
 			if p.coins>=5:finish_round(p.team);break
 
 func move_duration(p):
-	var speed=.15-.012*p.speed
+	var speed=.18-.012*p.speed
 	if p.dash>0:speed*=.66
 	if p.mount==1:speed*=.75
 	elif p.mount==2:speed*=1.1
@@ -673,30 +705,71 @@ func move_duration(p):
 	if terrain.has(p.cell) and terrain[p.cell].type=="sand":speed*=1.65
 	return maxf(.065,speed)
 
-func try_move(p,dir):
-	p.facing=dir
-	var target=p.cell+dir
-	var other=occupied(target,p.id)
-	if other!=null and other.trap>0:
-		if p.team==other.team:
-			other.trap=0;other.grace=1;burst(center(other.cell),Color("82f0c1"),14)
-			if p.id==0:stat("rescues")
-			announce("队友获救！")
-		else:kill_player(other)
-	if inside(target) and grid[target.y][target.x]==2:crates.try_push(target,dir,p)
-	var bubble=bomb_at(target)
-	if bubble!=null and p.kick>0:kick_bomb(bubble,dir)
-	if inside(target) and grid[target.y][target.x]==2 and p.mount==3 and p.jump<=0:
-		var landing=target+dir
-		if passable(landing,p) and occupied(landing,p.id)==null:target=landing;p.jump=1.0
-	if not passable(target,p) or occupied(target,p.id)!=null:return
-	p.from=p.visual
-	p.last_cell=p.cell
-	p.cell=target
-	p.move=0
+func move_player(p,input_direction,dt):
+	var dir=Vector2(input_direction).limit_length(1)
+	if dir!=Vector2.ZERO:
+		p.facing=Vector2i(signf(dir.x),0) if absf(dir.x)>absf(dir.y) else Vector2i(0,signf(dir.y))
+		p.motion_dir=p.facing
 	p.duration=move_duration(p)
-	p.cool=p.duration
-	p.steps+=1
+	var speed=1.0/p.duration
+	var ice=terrain.has(p.cell) and terrain[p.cell].type=="ice"
+	p.velocity=p.velocity.move_toward(dir*speed,dt*(25.0 if ice else 48.0 if dir!=Vector2.ZERO else 65.0))
+	var before=p.visual
+	var displacement=p.velocity*dt
+	var segments=maxi(1,int(ceil(displacement.length()/.10)))
+	for step in range(segments):
+		for axis in range(2):
+			if absf(displacement[axis])<.00001:continue
+			var axis_direction=Vector2i(signf(displacement.x),0) if axis==0 else Vector2i(0,signf(displacement.y))
+			var candidate=p.visual
+			candidate[axis]+=displacement[axis]/segments
+			var current_position=p.visual
+			var blocked=movement_blocked(p,candidate,axis_direction)
+			# A rabbit jump teleports to its landing; discard the old movement remainder.
+			if p.visual!=current_position:return
+			if not blocked:p.visual=candidate
+			else:p.velocity[axis]=0
+	p.last_cell=p.cell
+	p.cell=Vector2i(roundf(p.visual.x),roundf(p.visual.y))
+	var travelled=before.distance_to(p.visual)
+	var previous_step=int(p.gait*2)
+	p.gait+=travelled
+	p.steps=int(p.gait)
+	p.move=0.0 if travelled>.0001 else 1.0
+	p.momentum=clampf(p.velocity.length()/speed,0,1)
+	if int(p.gait*2)>previous_step:world_fx.footstep(ORIGIN+p.visual*TILE+Vector2(8,13),p.facing,p.mount>0)
+	if p.bubble_pass!=Vector2i(-1,-1) and (absf(p.visual.x-p.bubble_pass.x)>.76 or absf(p.visual.y-p.bubble_pass.y)>.76):p.bubble_pass=Vector2i(-1,-1)
+
+func movement_blocked(p,position,dir):
+	# A small foot collider lets characters move within tiles and along walls.
+	var radius=.25
+	var low=Vector2i(floor(position.x+.5-radius),floor(position.y+.5-radius))
+	var high=Vector2i(floor(position.x+.5+radius),floor(position.y+.5+radius))
+	for y in range(low.y,high.y+1):
+		for x in range(low.x,high.x+1):
+			var c=Vector2i(x,y)
+			if not inside(c) or grid[y][x] in [1,3]:return true
+			if grid[y][x]==2 and p.cloak<=0:
+				if p.push_cool<=0 and dir!=Vector2i.ZERO and crates.try_push(c,dir,p):p.push_cool=.18
+				if grid[y][x]==2:
+					if p.mount==3 and p.jump<=0:
+						var landing=c+dir
+						if passable(landing,p) and occupied(landing,p.id)==null:teleport(p,landing);p.jump=.8
+					return true
+			var bubble=bomb_at(c)
+			if bubble!=null and c!=p.bubble_pass:
+				if p.kick>0 and dir!=Vector2i.ZERO:kick_bomb(bubble,dir)
+				if bomb_at(c)!=null:return true
+	for other in players:
+		if other.id==p.id or other.dead or position.distance_to(other.visual)>=.52:continue
+		if other.trap>0:
+			if other.team==p.team:
+				release_player(other);burst(center(other.cell),Color("82f0c1"),14)
+				if p.id==0:stat("rescues")
+				announce("队友获救！")
+			else:kill_player(other)
+		if not other.dead:return true
+	return false
 
 func apply_terrain(p):
 	if not terrain.has(p.cell) or p.cell==p.last_cell:return
@@ -720,7 +793,7 @@ func apply_terrain(p):
 		announce("石门开启" if gate_open else "石门关闭")
 	p.last_cell=p.cell
 func teleport(p,dest):
-	p.cell=dest;p.visual=Vector2(dest);p.from=p.visual;p.move=1;p.last_cell=dest
+	p.cell=dest;p.visual=Vector2(dest);p.from=p.visual;p.move=1;p.last_cell=dest;p.momentum=0;p.drift=Vector2.ZERO;p.motion_dir=Vector2i.ZERO;p.velocity=Vector2.ZERO
 	burst(center(dest),Color("bdeeff"),10)
 func eject_from_box(p):
 	for d in DIRS:
@@ -730,6 +803,10 @@ func eject_from_box(p):
 func damage_player(p,owner):
 	if p.dead or p.grace>0 or p.trap>0:return
 	if owner>=0 and owner<players.size() and owner!=p.id and players[owner].team==p.team:return
+	p.hurt=.48
+	p.recoil=Vector2(p.facing)*-1
+	if owner>=0 and owner<players.size() and players[owner].cell!=p.cell:p.recoil=Vector2(p.cell-players[owner].cell).normalized()
+	world_fx.impact(center(p.cell),0,26)
 	if p.shield>0:
 		p.shield=0;p.grace=1
 		burst(center(p.cell),Color("e8ffe4"),12)
@@ -738,16 +815,20 @@ func damage_player(p,owner):
 		burst(center(p.cell),Color(Catalog.MOUNTS[p.mount].color),12)
 		if p.mount_hp<=0:p.mount=0;announce("坐骑替你挡住了水柱！")
 	else:
-		p.trap=3;p.grace=.6
+		p.trap=8;p.trapped_elapsed=0;p.grace=.6
 		sound("trap")
+func release_player(p):
+	p.trap=0;p.grace=1;p.pop_time=.55;p.pop_row=1
+
 func kill_player(p):
 	if p.dead:return
-	p.dead=true;p.trap=0
-	burst(center(p.cell),COLORS[p.id],18)
+	p.dead=true;p.trap=0;p.down=1.05;p.pop_time=.55;p.pop_row=0
+	burst(center(p.cell),color_for(p),18)
 	if p.id==0:stat("deaths")
 	sound("trap")
 
 func random_drop():
+	if (weather.nightness>.2 or weather.fog_strength>.2) and rng.randf()<.28:return rng.randi_range(26,27)
 	return rng.randi_range(20,25) if rng.randf()<.24 else rng.randi_range(1,18)
 
 func pickup(p,c):
@@ -831,14 +912,14 @@ func use_item(i):
 		var rescued=false
 		for other in players:
 			if not other.dead and other.team==p.team and other.trap>0 and manhattan(p.cell,other.cell)<=3:
-				other.trap=0;other.grace=1;rescued=true
+				release_player(other);rescued=true
 				if i==0:stat("rescues")
 		if not rescued:return
 	elif kind==3:
 		for b in bombs.duplicate():
 			if b.owner==i and bombs.has(b):explode(b)
 	elif kind in [1,9]:
-		p.trap=0;p.grace=1
+		release_player(p)
 		if kind==1:p.shield=8
 	elif kind==2:p.dash=6
 	elif kind==6:p.kick=8
@@ -851,6 +932,8 @@ func use_item(i):
 				other.freeze=2;burst(center(other.cell),Color("bfefff"),10)
 	elif kind==13:decoys.append({"cell":p.cell,"team":p.team,"character":p.character,"time":10.0})
 	elif kind==14:p.magnet=5
+	elif kind==26:weather.flare_time=8;announce("照明弹升空：全图照亮八秒！")
+	elif kind==27:p.torch=20;announce("火把点燃：自身视野扩大二十秒！")
 	elif kind in range(20,26):bubble_fx.infuse(p,kind-19)
 	p.item=0
 	burst(center(p.cell),Color(Catalog.ITEMS[kind].color),12)
@@ -866,8 +949,10 @@ func place_bomb(i,cell=null):
 	if grid[c.y][c.x] in [1,3]:return false
 	var fuse=3.4 if rule()=="gravity" else 2.3
 	bombs.append({"cell":c,"owner":i,"range":p.range,"power":p.power,"timer":fuse,"fuse":fuse,"slide":Vector2i.ZERO,"step":0.0,"element":p.element})
+	for player in players:
+		if absf(player.visual.x-c.x)<.76 and absf(player.visual.y-c.y)<.76:player.bubble_pass=c
 	if i==0:stat("bombs")
-	p.attack=.85
+	p.attack=.85;p.placing=.32
 	world_fx.impact(center(c),0,24)
 	sound("place")
 	return true
@@ -899,17 +984,24 @@ func explode(b):
 	bombs.erase(b)
 	var chained: Array=[]
 	var hit_boxes:Dictionary={}
+	# Remove exposed old pickups before creating new crate rewards.
+	for c in cells:
+		if grid[c.y][c.x]==0:drops.erase(c)
 	for c in cells:
 		if grid[c.y][c.x]==2:crates.damage(c,b.owner,hit_boxes)
-		elif drops.has(c):drops.erase(c)
 		var next=bomb_at(c)
 		if next!=null:chained.append(next)
-		blasts.append({"cell":c,"time":(.95 if b.get("element",0)==2 else .5)+.22*b.power,"owner":b.owner,"element":b.get("element",0)})
+		var lifetime=(.95 if b.get("element",0)==2 else .5)+.22*b.power
+		var links=[]
+		for direction in DIRS:
+			if cells.has(c+direction):links.append(direction)
+		blasts.append({"cell":c,"time":lifetime,"duration":lifetime,"origin":b.cell,"links":links,"owner":b.owner,"element":b.get("element",0)})
 		burst(center(c),Color("c8f8ff"),3)
 	bubble_fx.on_explode(b,cells)
 	shake=1.6
 	sound("splash")
-	for next in chained:explode(next)
+	for next in chained:
+		if bombs.has(next):world_fx.chain(center(b.cell),center(next.cell));explode(next)
 
 func kick_bomb(b,dir):
 	var dest=b.cell+dir
@@ -983,9 +1075,10 @@ func update_mechanisms(dt):
 	for hazard in hazards.duplicate():
 		hazard.wait-=dt
 		if hazard.wait<=0:
+			var hit_boxes:Dictionary={}
 			for c in hazard.cells:
 				if inside(c) and grid[c.y][c.x] not in [1,3]:
-					if grid[c.y][c.x]==2:crates.damage(c)
+					if grid[c.y][c.x]==2:crates.damage(c,-1,hit_boxes)
 					blasts.append({"cell":c,"time":.6,"owner":-1})
 					burst(center(c),Color("ffe68a"),3)
 			hazards.erase(hazard)
@@ -996,14 +1089,14 @@ func update_mechanisms(dt):
 	if rule()=="magnet":
 		for b in bombs:
 			if b.slide==Vector2i.ZERO and b.timer>1.2:
-				var dir=Vector2i(signi(10-b.cell.x),0) if b.cell.x!=10 else Vector2i(0,signi(7-b.cell.y))
+				var dir=Vector2i(signi(W/2-b.cell.x),0) if b.cell.x!=W/2 else Vector2i(0,signi(H/2-b.cell.y))
 				if dir!=Vector2i.ZERO and bubble_can_move(b.cell+dir):b.slide=dir;b.step=.3
 	if rule()=="train":
 		var phase=fmod(round_time,12)
 		if phase>=8:
-			var head=int((phase-8)*6)-2
+			var head=int((phase-8)*8)-2
 			for p in players:
-				if p.dead or p.cell.y!=7 or p.cell.x>head or p.cell.x<head-2:continue
+				if p.dead or p.cell.y!=H/2 or p.cell.x>head or p.cell.x<head-2:continue
 				var pushed=false
 				for dir in [Vector2i.UP,Vector2i.DOWN]:
 					if passable(p.cell+dir,p) and occupied(p.cell+dir,p.id)==null:teleport(p,p.cell+dir);pushed=true;break
@@ -1154,6 +1247,7 @@ func bot_actions(p,danger):
 			12,13,17:should_use=players.any(func(other):return not other.dead and other.team!=p.team and manhattan(other.cell,p.cell)<=4)
 			18:should_use=players.any(func(other):return not other.dead and other.team==p.team and other.trap>0 and manhattan(other.cell,p.cell)<=3)
 			_:should_use=true
+		if p.item in [26,27]:should_use=(weather.nightness>.2 or weather.fog_strength>.2) and (p.item==26 or p.torch<=0)
 		if mode==3 and p.item in [12,13,17]:should_use=adventure.enemies.any(func(enemy):return not enemy.dead and manhattan(enemy.cell,p.cell)<=4)
 		if should_use:use_item(p.id)
 	if danger.has(p.cell) or p.get("attack",0)>0 or bomb_at(p.cell)!=null:return
@@ -1172,34 +1266,112 @@ func bot_actions(p,danger):
 
 func rect(pos,size,color):draw_rect(Rect2(pos,size),color)
 func pixel_size(size):return 12 if size<18 else (24 if size<32 else 36)
-func text_at(message,pos,size=12,color=CREAM):draw_string(font,pos,str(message),HORIZONTAL_ALIGNMENT_LEFT,-1,pixel_size(size),color)
+func loc(message):return i18n.render(message) if i18n else str(message)
+func apply_language(index):
+	i18n.set_language(I18n.LOCALES[index]);profile.locale=i18n.locale;get_tree().root.title=loc("泡泡糖 · 像素群岛大冒险");save_profile();encyclopedia.rebuild();queue_redraw()
+func draw_languages():
+	page_header("语言 / Language")
+	for index in range(5):button(Vector2(190,96+index*40),Vector2(260,32),I18n.NAMES[index],index==language_selection)
+	centered("选择语言后立即生效，自动保存。",333,12)
+func text_at(message,pos,size=12,color=CREAM,max_width=0):
+	var label=loc(message);var px=pixel_size(size)
+	var available=float(max_width) if max_width>0 else 632-pos.x
+	var measured=font.get_string_size(label,HORIZONTAL_ALIGNMENT_LEFT,-1,px).x
+	if measured>available and available>0:px=maxi(7,int(px*available/measured))
+	while available>0 and px>7 and font.get_string_size(label,HORIZONTAL_ALIGNMENT_LEFT,-1,px).x>available:px-=1
+	if available>0 and font.get_string_size(label,HORIZONTAL_ALIGNMENT_LEFT,-1,px).x>available:
+		while not label.is_empty() and font.get_string_size(label+"…",HORIZONTAL_ALIGNMENT_LEFT,-1,px).x>available:label=label.left(label.length()-1)
+		label+="…"
+	draw_string(font,pos,label,HORIZONTAL_ALIGNMENT_LEFT,-1,px,color)
 func centered(message,y,size=12,color=CREAM):
-	var width=font.get_string_size(str(message),HORIZONTAL_ALIGNMENT_LEFT,-1,pixel_size(size)).x
-	text_at(message,Vector2((640-width)/2,y),size,color)
-func wrapped(message,pos,width=9,color=CREAM):
-	var line=0
-	var start=0
-	while start<message.length():
-		var count=mini(width,message.length()-start)
-		if start+count<message.length() and message.substr(start+count,1) in "。，！；：、）":count-=1
-		text_at(message.substr(start,count),pos+Vector2(0,line*16),12,color)
-		start+=count
-		line+=1
+	var label=loc(message);var px=pixel_size(size)
+	var width=font.get_string_size(label,HORIZONTAL_ALIGNMENT_LEFT,-1,px).x
+	if width>610:px=maxi(7,int(px*610/width));width=font.get_string_size(label,HORIZONTAL_ALIGNMENT_LEFT,-1,px).x
+	draw_string(font,Vector2((640-width)/2,y),label,HORIZONTAL_ALIGNMENT_LEFT,-1,px,color)
+func wrapped(message,pos,width=9,color=CREAM,max_lines=0):
+	var label=loc(message);var available=width*12.0;var px=12
+	var limit=max_lines if max_lines>0 else maxi(2,int((330-pos.y)/16))
+	var lines=wrap_lines(label,available,px)
+	while lines.size()>limit and px>8:px-=1;lines=wrap_lines(label,available,px)
+	if lines.size()>limit:lines=lines.slice(0,limit);lines[limit-1]+="…"
+	for line in range(lines.size()):
+		var content=lines[line]
+		if font.get_string_size(content,HORIZONTAL_ALIGNMENT_LEFT,-1,px).x>available:
+			while not content.is_empty() and font.get_string_size(content+"…",HORIZONTAL_ALIGNMENT_LEFT,-1,px).x>available:content=content.left(content.length()-1)
+			content+="…"
+		draw_string(font,pos+Vector2(0,line*(px+4)),content,HORIZONTAL_ALIGNMENT_LEFT,-1,px,color)
+func wrap_lines(label,width,px):
+	var lines:Array=[];var current=""
+	var tokens=label.split(" ") if i18n.locale in ["en","fr","de"] else label.split("")
+	var spacer=" " if i18n.locale in ["en","fr","de"] else ""
+	for token in tokens:
+		var candidate=current+spacer+token if not current.is_empty() else token
+		if font.get_string_size(candidate,HORIZONTAL_ALIGNMENT_LEFT,-1,px).x>width and not current.is_empty():lines.append(current);current=token
+		else:current=candidate
+	if not current.is_empty():lines.append(current)
+	return lines
 
 func panel(pos,size,color=Color("60788e")):
-	rect(pos+Vector2(0,3),size,Color("101b2e"))
-	rect(pos,size,color)
-	rect(pos+Vector2(2,2),size-Vector2(4,4),Color("1c3045"))
+	var style=StyleBoxFlat.new();style.bg_color=Color("17283b");style.border_color=color.darkened(.25)
+	style.set_border_width_all(1);style.set_corner_radius_all(4)
+	draw_style_box(style,Rect2(pos,size))
 func button(pos,size,label,selected=false):
 	panel(pos,size,Color("ffe08e") if selected else Color("527c91"))
-	var width=font.get_string_size(label,HORIZONTAL_ALIGNMENT_LEFT,-1,12).x
-	text_at(label,pos+Vector2((size.x-width)/2,size.y/2+5),12,Color("ffe08e") if selected else CREAM)
+	var localized=loc(label);var px=12
+	var width=font.get_string_size(localized,HORIZONTAL_ALIGNMENT_LEFT,-1,px).x
+	if width>size.x-8:px=maxi(7,int(px*(size.x-8)/width));width=font.get_string_size(localized,HORIZONTAL_ALIGNMENT_LEFT,-1,px).x
+	draw_string(font,pos+Vector2((size.x-width)/2,size.y/2+5),localized,HORIZONTAL_ALIGNMENT_LEFT,-1,px,Color("ffe08e") if selected else CREAM)
 func item_icon(pos,kind,side=20):
 	if kind<=0:return
-	var source=Rect2(Vector2((kind%10)*20,int(kind/10)*20),Vector2(20,20))
-	draw_texture_rect_region(item_art,Rect2(pos,Vector2(side,side)),source)
+	hd.sprite("remote-hd.png" if kind==3 else "items-hd.png",0 if kind==3 else kind,pos,Vector2.ONE*side)
+func premium_hero_region(character,direction=0):return hd.region(HDArt.HERO_VIEWS[direction],character)
+func hero_piece(pos,size,source,part,offset=Vector2.ZERO,tint=Color.WHITE,direction=0):
+	var ratio=size/Vector2(96,112)
+	var region=Rect2(source.position+part.position*source.size/Vector2(96,112),part.size*source.size/Vector2(96,112))
+	draw_texture_rect_region(hd.textures[HDArt.HERO_VIEWS[direction]],Rect2(pos+(part.position+offset)*ratio,part.size*ratio),region,tint)
+func hero_sprite(pos,character,size,direction=0,pose=0,tint=Color.WHITE,seated=false,walk_phase=-1.0,palette_id=-1):
+	var name=HDArt.HERO_VIEWS[direction]
+	var source=premium_hero_region(character,direction)
+	if pose in range(4,12) and not seated:
+		var walk_name="walk-"+HDArt.WALK_NAMES[character]+"-hd.png"
+		if hd.regions.has(walk_name):
+			name=walk_name
+			var phase=(walk_phase if walk_phase>=0 else (pose-4)*1.5) if pose in range(4,12) else 0.0
+			var frames=int(hd.regions[name].size()/4)
+			source=hd.region(name,direction*frames+posmod(int(phase*frames/12.0),frames))
+	if direction==0 and not seated and (pose in range(12,16) or pose in range(20,24)):
+		name="hero-actions-hd.png"
+		var action=mini(2,pose-12)+4 if pose<16 else pose-20
+		source=hd.region(name,action*8+character)
+	if pose in range(16,20) and not seated:
+		name="hero-trapped-v5.png"
+		source=hd.region(name,(pose-16)*8+character)
+	if seated:source.size.y*=.82
+	var drawn=source.size*minf(size.x/source.size.x,size.y/source.size.y)
+	var at=pos+Vector2((size.x-drawn.x)/2,size.y-drawn.y)
+	var hurt=pose in range(12,16)
+	var trapped=pose in range(16,20)
+	var placing=pose>=20
+	var pivot=at+Vector2(drawn.x*.5,drawn.y*.72)
+	var angle=[-.13,-.085,-.035,0.0][pose-12] if hurt else sin(elapsed*10)*.025 if trapped else [0.0,-.045,-.025,0.0][pose-20] if placing else 0.0
+	if angle!=0:
+		draw_set_transform(pivot+Vector2(sin(elapsed*83),cos(elapsed*71))*shake,angle)
+		at-=pivot
+	if palette_id>=0:draw_texture_rect(hero_palette.texture_for(palette_id,false,hd.textures[name],source),Rect2(at,drawn),false,tint)
+	else:draw_texture_rect_region(hd.textures[name],Rect2(at,drawn),source,tint)
+	if angle!=0:draw_set_transform(Vector2(sin(elapsed*83),cos(elapsed*71))*shake)
+
 func portrait(pos,character,size=Vector2(20,24),frame=0):
-	draw_texture_rect_region(character_art,Rect2(pos,size),Rect2(Vector2(character*20,frame*24),Vector2(20,24)))
+	hero_sprite(pos,character,size,int(frame/3),0 if frame%3==0 else 4+(frame%3)*2)
+
+func face_portrait(pos,character,size,palette_id=-1):
+	var source=premium_hero_region(character)
+	source.size.y*=.62
+	var drawn=source.size*minf(size.x/source.size.x,size.y/source.size.y)
+	var at=pos+(size-drawn)/2
+	if palette_id>=0:draw_texture_rect(hero_palette.texture_for(palette_id,true,hd.textures[HDArt.HERO_VIEWS[0]],source,.62),Rect2(at,drawn),false)
+	else:draw_texture_rect_region(hd.textures[HDArt.HERO_VIEWS[0]],Rect2(at,drawn),source)
+
 func color_for(p):
 	if mode in [0,2,3]:return COLORS[0 if p.team==0 else 1]
 	return COLORS[p.id]
@@ -1208,13 +1380,16 @@ func burst(pos,color,amount):
 
 func _draw():
 	if backgrounds.is_empty():return
-	draw_texture(backgrounds[Catalog.MAPS[arena].theme],Vector2.ZERO)
+	draw_texture_rect(backgrounds[Catalog.MAPS[arena].theme],Rect2(Vector2.ZERO,Vector2(640,360)),false,Color.WHITE.lerp(Color(.12,.17,.26),weather.nightness*.8 if weather.flare_time<=0 else 0))
+	rect(Vector2.ZERO,Vector2(640,360),Color(.025,.045,.075,.34))
 	if state=="story":adventure.draw_story();return
-	if state=="menu":draw_menu();return
+	if frontend.active():frontend.draw();return
 	if state=="maps":draw_map_browser();return
 	if state=="characters":draw_characters();return
 	if state=="stats":draw_stats();return
 	if state=="help":draw_help();return
+	if state=="codex":encyclopedia.draw();return
+	if state=="languages":draw_languages();return
 	draw_hud()
 	draw_sidebar()
 	draw_set_transform(Vector2(sin(elapsed*83),cos(elapsed*71))*shake)
@@ -1222,6 +1397,7 @@ func _draw():
 	for y in range(H):
 		for x in range(W):draw_tile(Vector2i(x,y))
 	world_fx.draw_ground()
+	weather.draw_torches()
 	crates.draw()
 	bubble_fx.draw_fields()
 	draw_terrain()
@@ -1229,8 +1405,17 @@ func _draw():
 	draw_weather()
 	for c in drops:
 		if grid[c.y][c.x]!=0:continue
-		var bob=round(sin(elapsed*4+c.x)*1.5)
-		item_icon(center(c)+Vector2(-10,-10+bob),int(drops[c]))
+		var kind=int(drops[c])
+		var bob=sin(elapsed*4+c.x)*1.25
+		var drop_color=Color(Catalog.ITEMS[kind].color)
+		draw_circle(center(c)+Vector2(0,5),6,Color(.06,.12,.18,.18))
+		draw_arc(center(c)+Vector2(0,4),6+sin(elapsed*3+c.y)*.5,0,TAU,24,Color(drop_color,.35),1)
+		item_icon(center(c)+Vector2(-6,-7+bob),kind,12)
+		var sparkle=fmod(elapsed+c.x*.3+c.y*.2,2)
+		if sparkle<.45:
+			var at=center(c)+Vector2(7,-9+bob)
+			draw_line(at-Vector2(2,0),at+Vector2(2,0),Color(1,.98,.8,1-sparkle/.45),1)
+			draw_line(at-Vector2(0,2),at+Vector2(0,2),Color(1,.98,.8,1-sparkle/.45),1)
 	for b in bombs:
 		if b.timer<.7:draw_warning(b)
 	for b in bombs:draw_bomb(b)
@@ -1242,7 +1427,7 @@ func _draw():
 	var sorted=players.duplicate()
 	sorted.sort_custom(func(a,b):return a.visual.y<b.visual.y)
 	for p in sorted:
-		if not p.dead:draw_actor(ORIGIN+p.visual*TILE+Vector2(TILE/2.0,TILE/2.0),p)
+		draw_actor(ORIGIN+p.visual*TILE+Vector2(TILE/2.0,TILE/2.0),p)
 	for effect in pickup_effects:
 		var progress=1-effect.life/.65
 		item_icon(effect.pos+Vector2(-8,-12-progress*22),effect.kind,16*(1-progress*.35))
@@ -1251,9 +1436,6 @@ func _draw():
 	world_fx.draw_air()
 	map_rules.draw_overlay()
 	draw_set_transform(Vector2.ZERO)
-	if notice_time>0:
-		panel(Vector2(194,79),Vector2(252,19),Color("ffe08e"))
-		centered(notice,93,12,Color("ffe08e"))
 	if countdown>0:
 		panel(Vector2(238,165),Vector2(164,44),Color("62ceff"))
 		centered(str(int(ceil(countdown))) if countdown>.7 else "开战！",197,24)
@@ -1271,16 +1453,13 @@ func draw_tile(c):
 		var age=round_time-collapsed_at.get(c,round_time-1)
 		if age<.55:
 			var inset=age*9
-			draw_texture_rect_region(tiles,Rect2(pos+Vector2(inset,inset+age*8),Vector2(TILE-2*inset,TILE-2*inset)),Rect2(Vector2(0,theme*20),Vector2(20,20)))
+			hd.theme_sprite(theme,0,pos+Vector2(inset,inset+age*8),Vector2(TILE-2*inset,TILE-2*inset),Color.WHITE,false)
 		return
+	if cell in [1,2]:hd.theme_sprite(theme,kind,pos,Vector2(TILE,TILE),Color.WHITE,false)
 	if cell==1:kind=2
 	elif cell==2:kind=3
 	elif cell==3:kind=4
-	draw_texture_rect_region(tiles,Rect2(pos,Vector2(TILE,TILE)),Rect2(Vector2(kind*20,theme*20),Vector2(20,20)))
-	if rule()=="gate" and cell==1 and c.x>0 and c.y>0 and c.x<W-1 and c.y<H-1:
-		rect(pos+Vector2(2,1),Vector2(16,17),Color("b99a70"))
-		rect(pos+Vector2(1,1),Vector2(18,3),Color("ecd2a0"))
-		for x in [5,10,15]:draw_line(pos+Vector2(x,5),pos+Vector2(x,15),Color("8a765b"),1)
+	hd.theme_sprite(theme,mini(kind,3),pos,Vector2(TILE,TILE),Color.WHITE,false)
 	if cell==2 and vine_cells.has(c):
 		draw_line(pos+Vector2(6,17),pos+Vector2(8,2),Color("95c989"),2)
 		draw_line(pos+Vector2(8,10),pos+Vector2(14,6),Color("b1dea0"),2)
@@ -1293,78 +1472,31 @@ func draw_tile(c):
 			for x in [6,10,14]:rect(pos+Vector2(x,3),Vector2(1,13),Color("edca81"))
 
 func draw_terrain():
+	var kinds={"portal":0,"flow":1,"ice":2,"spring":3,"sand":4,"switch":5,"lava":6,"mirror":7,"mud":8,"spore":9,"spike":10,"gust":11,"vortex":12,"geyser":13,"clock":14,"bridge":15}
 	for c in terrain:
-		if grid[c.y][c.x]!=0:continue
-		var tile=terrain[c]
-		var pos=center(c)
-		match tile.type:
-			"portal":
-				draw_circle(pos,8,Color("7563b7"))
-				draw_arc(pos,6,elapsed*2,elapsed*2+5.5,20,Color("e0beff"),2)
-				draw_circle(pos,2,Color("f5dcff"))
-			"flow":
-				for n in [-1,0,1]:
-					var dx=(n*5+int(elapsed*8)%5)*tile.dir.x
-					draw_line(pos+Vector2(dx-2*tile.dir.x,-3),pos+Vector2(dx,0),Color("d1f9e6"),1)
-					draw_line(pos+Vector2(dx,0),pos+Vector2(dx-2*tile.dir.x,3),Color("d1f9e6"),1)
-			"ice":
-				rect(pos-Vector2(9,9),Vector2(18,18),Color("a8d8ec"))
-				draw_line(pos+Vector2(-7,1),pos+Vector2(3,-6),Color("e6fbff"),1)
-				draw_line(pos+Vector2(0,7),pos+Vector2(7,0),Color("e6fbff"),1)
-			"spring":
-				if rule()=="mushroom":
-					draw_texture_rect_region(tiles,Rect2(pos-Vector2(10,10),Vector2(20,20)),Rect2(Vector2(100,20),Vector2(20,20)))
-				else:
-					rect(pos-Vector2(8,7),Vector2(16,14),Color("986caa"))
-					for n in range(4):draw_line(pos+Vector2(-6,-4+n*3),pos+Vector2(6,-4+n*3),Color("ffd7de"),1)
-			"sand":
-				for n in range(3):draw_arc(pos,3+n*2,.1,3.8,16,Color("af8f58"),1)
-			"switch":
-				draw_circle(pos,7,INK);draw_circle(pos,5,Color("92e6b3") if gate_open else Color("ffe088"))
-			"lava":
-				var phase=fmod(round_time,10)
-				var color=Color("ffce80") if phase>7.5 else Color("b66a59")
-				if phase>5.5 and int(elapsed*5)%2==0:color=Color("f9a970")
-				draw_line(pos+Vector2(-6,-8),pos+Vector2(2,0),color,2)
-				draw_line(pos+Vector2(2,0),pos+Vector2(-3,8),color,2)
-			"rail":
-				draw_line(pos+Vector2(-10,-6),pos+Vector2(10,-6),Color("c3c8b6"),1)
-				draw_line(pos+Vector2(-10,6),pos+Vector2(10,6),Color("c3c8b6"),1)
-				for x in [-6,2]:rect(pos+Vector2(x,-7),Vector2(2,15),Color("846b62"))
-			"supply":
-				draw_rect(Rect2(pos-Vector2(7,7),Vector2(14,14)),Color("e9d898"),false,1)
-	if rule()=="magnet":item_icon(center(Vector2i(10,7))-Vector2(10,10),14)
-	if rule()=="sand":
-		draw_arc(center(Vector2i(10,7)),14,0,TAU,28,Color("74c8b8"),3)
-	if rule()=="laser":
-		for y in [3,6,9]:
-			draw_circle(center(Vector2i(0,y)),5,Color("ffca88"));draw_circle(center(Vector2i(W-1,y)),5,Color("ffca88"))
+		if grid[c.y][c.x] in [1,2,3]:continue
+		var tile=terrain[c];var pos=center(c)
+		if kinds.has(tile.type):
+			var tint=Color.WHITE
+			if tile.type=="lava":tint=Color(1.3,.9,.6) if fmod(round_time,10)>7.5 else Color(.65,.65,.65)
+			hd.sprite("mechanisms-v5.png",kinds[tile.type],pos-Vector2.ONE*(TILE/2.0-1),Vector2.ONE*(TILE-2),tint)
+		elif tile.type=="lamp":hd.sprite("missions-hd.png",2,pos-Vector2(6,8),Vector2(12,14))
+		elif tile.type=="rail":
+			for offset in [-4,4]:draw_line(pos+Vector2(-8,offset),pos+Vector2(8,offset),Color("768492"),.8)
+		elif tile.type=="supply":draw_arc(pos,4,0,TAU,24,Color(.8,.85,.9,.14),.5)
+
 	for hazard in hazards:
 		for c in hazard.cells:
-			if not inside(c):continue
-			var pos=center(c)
-			draw_arc(pos,8,0,TAU,16,Color("ffcf86"),1)
-			draw_line(pos+Vector2(-5,-5),pos+Vector2(5,5),Color("ffcf86"),1)
-			draw_line(pos+Vector2(-5,5),pos+Vector2(5,-5),Color("ffcf86"),1)
-	if rule()=="train":
-		var phase=fmod(round_time,12)
-		if phase>=8:
-			var head=int((phase-8)*6)-2
-			for car in range(3):
-				var c=Vector2i(head-car,7)
-				if c.x<1 or c.x>=W-1:continue
-				var pos=center(c)
-				rect(pos+Vector2(-9,-10),Vector2(18,17),Color("dfa464"))
-				rect(pos+Vector2(-7,-8),Vector2(14,8),Color("67a8b6"))
-				draw_circle(pos+Vector2(-5,8),3,INK);draw_circle(pos+Vector2(5,8),3,INK)
-				if car==0:rect(pos+Vector2(4,-13),Vector2(4,5),Color("e9c095"))
+			if inside(c):draw_arc(center(c),6,0,TAU,32,Color("ffbb65"),.8)
+	if rule()=="train" and fmod(round_time,12)>=8:
+		var head=int((fmod(round_time,12)-8)*8)-2
+		for car in range(3):
+			var c=Vector2i(head-car,H/2)
+			if inside(c):hd.sprite("fauna-hd.png",8,center(c)-Vector2(8,10),Vector2(16,18))
 	if clock_time<=3:
-		var ring=sudden_ring+2
-		var until=clock_time+float(sudden_ring+1)*5
-		if until<=2 and int(elapsed*5)%2==0:
-			for y in range(1,H-1):
-				for x in range(1,W-1):
-					if mini(mini(x,W-1-x),mini(y,H-1-y))==ring:draw_rect(Rect2(ORIGIN+Vector2(x,y)*TILE+Vector2(1,1),Vector2(TILE-2,TILE-2)),Color("ffe08e"),false,1)
+		for y in range(1,H-1):
+			for x in range(1,W-1):
+				if mini(mini(x,W-1-x),mini(y,H-1-y))==sudden_ring+2:draw_rect(Rect2(ORIGIN+Vector2(x,y)*TILE+Vector2.ONE,Vector2.ONE*(TILE-2)),Color(1,.75,.3,.5+.3*sin(elapsed*9)),false,.8)
 
 func draw_bomb(b):
 	var pos=center(b.cell)
@@ -1372,12 +1504,8 @@ func draw_bomb(b):
 	var element=b.get("element",0)
 	var color=color_for(p) if element==0 else Color(BubbleEffects.STYLES[element].color)
 	var pulse=sin(elapsed*(15 if b.timer<.7 else 4))*.5
-	draw_circle(pos+Vector2(0,3),8.5,Color("355265"))
-	draw_circle(pos,8.5+pulse,INK)
-	draw_circle(pos,7.5+pulse,color)
-	draw_arc(pos+Vector2(0,1),5.5+pulse,.2,2.8,18,color.darkened(.3),2)
-	draw_circle(pos+Vector2(-3,-3),2,Color("edffff"))
-	draw_circle(pos+Vector2(3,2),1,Color("e0faff"))
+	hd.sprite("bubbles-hd.png",element,pos-Vector2(10+pulse,10+pulse),Vector2.ONE*(20+pulse*2))
+	draw_arc(pos,9.0+pulse,0,TAU,48,Color(color,.7),.45)
 	if element>0:
 		draw_arc(pos,10,elapsed*2,elapsed*2+4.5,20,color.lightened(.3),1)
 		item_icon(pos-Vector2(4,4),19+element,8)
@@ -1389,84 +1517,176 @@ func draw_warning(b):
 func draw_splash(f):
 	var pos=center(f.cell)
 	var element=f.get("element",0)
-	var color=Color(BubbleEffects.STYLES[element].color) if element>0 else (Color("ffe49c") if f.owner<0 else color_for(players[f.owner]).lightened(.25))
-	rect(pos+Vector2(-10,-5),Vector2(20,10),color)
-	rect(pos+Vector2(-5,-10),Vector2(10,20),color)
-	rect(pos+Vector2(-10,-2),Vector2(20,4),Color("eaffff"))
-	rect(pos+Vector2(-2,-10),Vector2(4,20),Color("eaffff"))
+	var color=Color(BubbleEffects.STYLES[element].color) if element>0 else Color("69dfff")
+	if f.owner<0:color=Color("ffcf8c")
+	var lifetime=f.get("duration",.6)
+	var age=clampf(1-f.time/lifetime,0,1)
+	var opacity=minf(1,f.time/.13)
+	var rise=clampf(age/.14,0,1)
+	var width=(4.8+sin(age*PI)*1.1)*rise
+	var links=f.get("links",[])
+	if links.is_empty():links=DIRS
+	# Connected jets replace the repeated square crosses. Curved foam follows their flow.
+	for direction in links:
+		var axis=Vector2(direction)
+		var side=Vector2(-axis.y,axis.x)
+		var points=PackedVector2Array()
+		for n in range(7):
+			var along=n/6.0
+			var wave=sin(along*TAU-age*17+f.cell.x*.7+f.cell.y)*.55
+			points.append(pos+axis*(along*(TILE*.5+.5))+side*wave)
+		draw_polyline(points,Color(color.darkened(.32),opacity*.7),width*2.3,false)
+		draw_polyline(points,Color(color,opacity*.85),width*1.7,false)
+		draw_polyline(points,Color(color.lightened(.5),opacity*.9),width*.85,false)
+		var foam=PackedVector2Array()
+		for n in range(points.size()):foam.append(points[n]+side*(sin(n*.8-age*16)*.5-width*.35))
+		draw_polyline(foam,Color(.91,1,1,opacity*.9),.55,false)
+		var travel=fmod(age*4+float(f.cell.x+f.cell.y)*.13,1.0)
+		var droplet=pos+axis*(travel*TILE*.55)+side*width*.7
+		draw_circle(droplet,.8,Color(.95,1,1,opacity))
+		if f.get("origin",f.cell)==f.cell:
+			var spray=pos+axis*(4+age*12)+side*sin(age*12)*2
+			draw_circle(spray,1.2*(1-age),Color(color.lightened(.65),opacity))
+	draw_circle(pos,width,Color(color.lightened(.2),opacity*.7))
+	if f.get("origin",f.cell)==f.cell:
+		draw_arc(pos,3+age*10,0,TAU,48,Color(.87,.98,1,opacity*(1-age)),.65)
+	if element==1:
+		for angle in range(3):
+			var axis=Vector2.from_angle(angle*PI/3+age)
+			draw_line(pos-axis*3,pos+axis*3,Color(.92,.98,1,opacity),.55)
+	elif element==2:
+		for n in range(3):
+			var at=pos+Vector2(n*3-3,-fmod(age*24+n*3,10))
+			draw_circle(at,1.1,Color(1,.91,.56,opacity))
+	elif element==3:
+		var zig=PackedVector2Array([pos+Vector2(-3,-3),pos+Vector2(0,-1),pos+Vector2(-1,2),pos+Vector2(3,4)])
+		draw_polyline(zig,Color(1,.95,1,opacity),.8,false)
+	elif element==4:
+		for n in range(2):
+			var at=pos+Vector2.from_angle(age*8+n*PI)*3
+			draw_arc(at,1.5,age,age+PI*1.6,8,Color(.85,1,.65,opacity),.7)
+	elif element in [5,6]:
+		draw_line(pos-Vector2(2,0),pos+Vector2(2,0),Color(1,.98,.88,opacity),.65)
+		draw_line(pos-Vector2(0,2),pos+Vector2(0,2),Color(1,.98,.88,opacity),.65)
 
 func draw_actor(pos,p):
+	if p.dead:
+		var death_phase=clampi(int((1.05-p.down)/.35),0,2)
+		var size=Vector2(20,25) if death_phase==0 else Vector2(27,18) if death_phase==1 else Vector2(29,12)
+		var source=hd.region("hero-death-v5.png",death_phase*8+p.character)
+		var drawn=source.size*minf(size.x/source.size.x,size.y/source.size.y)
+		draw_texture_rect(hero_palette.texture_for(p.id,false,hd.textures["hero-death-v5.png"],source),Rect2(pos+Vector2(-drawn.x/2,5-drawn.y),drawn),false)
+		draw_bubble_break(pos,p)
+		return
 	var color=color_for(p)
-	draw_arc(pos+Vector2(0,7),8,0,TAU,18,color,1)
-	if p.grace>0 and int(elapsed*13)%2==0:return
-	var walking=p.move<1 and p.trap<=0 and p.freeze<=0
-	var phase=elapsed*(8 if p.mount>0 else 12)
-	var bob=-abs(sin(phase))*(1.2 if p.mount>0 else .7) if walking else sin(elapsed*2+p.id)*.25
-	if p.jump>0:bob-=sin(clampf(p.jump/.8,0,1)*PI)*9
+	var walking=p.move<1 and p.trap<=0 and p.freeze<=0 and not p.dead
+	var phase=p.gait*PI
+	var bob=-abs(sin(phase))*.6 if walking and p.mount>0 else 0.0
 	var direction=0 if p.facing==Vector2i.DOWN else (1 if p.facing==Vector2i.UP else (2 if p.facing==Vector2i.LEFT else 3))
-	var frame=direction*3+(1+int(phase*2)%2 if walking else 0)
+	var pose=3 if fmod(elapsed+p.id*.67,4)>3.86 else int(elapsed*2+p.id)%3
+	if walking:pose=4+int(p.gait*4)%8
+	elif p.placing>0:pose=20+clampi(int((.32-p.placing)/.08),0,3)
+	if p.trap>0:pose=16+int(elapsed*9)%4
+	if p.hurt>0:pose=12+clampi(int((.48-p.hurt)/.12),0,3);pos+=p.recoil*sin(p.hurt/.48*PI)*2.5
+	var tint=Color(1.35,1.28,1.15) if p.hurt>.36 else Color.WHITE
+	if p.grace>0 and p.hurt<=0:tint.a=.6+.4*sin(elapsed*22)
+	if p.jump>0:bob-=sin(clampf(p.jump/.8,0,1)*PI)*9
+	# Contact shadow and team ring are distinct from the body and follow the ground.
+	draw_set_transform(pos+Vector2(0,5),0,Vector2(1,.35))
+	draw_circle(Vector2.ZERO,9 if p.mount>0 else 7,Color(0.05,.09,.15,.38*tint.a))
+	draw_arc(Vector2.ZERO,10 if p.mount>0 else 8,0,TAU,24,Color(color,.65*tint.a),1)
+	draw_set_transform(Vector2(sin(elapsed*83),cos(elapsed*71))*shake)
 	if p.mount>0:
-		draw_texture_rect_region(mount_art,Rect2(pos+Vector2(-16,-12+bob),Vector2(32,28)),Rect2(Vector2((p.mount-1)*32,0),Vector2(32,28)))
-		portrait(pos+Vector2(-10,-23+bob),p.character,Vector2(20,24),frame)
+		var mount_frame=int((p.steps-1+p.move)*4)%4 if walking else 0
+		hd.mount_sprite(p.mount,direction,pos+Vector2(-12,-15+bob),Vector2(24,20),tint,phase if walking else 0.0)
+		var seated_pose=pose if p.hurt>0 or p.trap>0 or p.placing>0 else 0
+		hero_sprite(pos+Vector2(-11,-25+bob),p.character,Vector2(22,26),direction,seated_pose,tint,true,-1.0,p.id)
 		for n in range(p.mount_hp):rect(pos+Vector2(-6+n*3,16),Vector2(2,2),Color("fff09b"))
-	else:portrait(pos+Vector2(-10,-15+bob),p.character,Vector2(20,24),frame)
-	if p.freeze>0:
-		draw_rect(Rect2(pos+Vector2(-10,-14),Vector2(20,24)),Color(.67,.88,1,.35))
-	if p.shield>0 or p.trap>0:
-		draw_arc(pos+Vector2(0,-3),12,0,TAU,24,Color("b3ffe0") if p.shield>0 else Color("e7fcff"),1)
+	else:hero_sprite(pos+Vector2(-11,-20+bob),p.character,Vector2(22,25),direction,pose,tint,false,p.gait*6,p.id)
+	if p.hurt>0:
+		var hit=1-p.hurt/.48
+		for n in range(5):
+			var angle=n*TAU/5+hit
+			var at=pos+Vector2(cos(angle),sin(angle))*(8+hit*9)-Vector2(0,5)
+			draw_line(at-Vector2(1,0),at+Vector2(1,0),Color(1,.95,.7,1-hit),1)
+			draw_line(at-Vector2(0,1),at+Vector2(0,1),Color(1,.95,.7,1-hit),1)
+	if p.freeze>0:draw_rect(Rect2(pos+Vector2(-15,-32),Vector2(30,42)),Color(.67,.88,1,.16))
+	if p.shield>0:
+		draw_arc(pos+Vector2(0,-5),15,elapsed*1.5,elapsed*1.5+TAU*.8,32,Color("b3ffe0"),1)
+		for n in range(3):draw_circle(pos+Vector2(cos(elapsed*2+n*TAU/3),sin(elapsed*2+n*TAU/3))*15-Vector2(0,5),1,Color("edffd3"))
 	if p.trap>0:
-		text_at(str(snappedf(p.trap,.1)),pos+Vector2(-8,-19),12,Color("fff3c5"))
-	if p.kick>0:item_icon(pos+Vector2(-14,5),6,9)
+		var bubble_pos=pos+Vector2(0,-5)
+		draw_circle(bubble_pos,14,Color(.36,.72,.95,.15))
+		hd.sprite("bubbles-hd.png",7,bubble_pos-Vector2(15,15),Vector2(30,30))
+		draw_arc(bubble_pos+Vector2(-1,-1),13,3.5,4.5,12,Color("efffff"),2)
+		draw_circle(bubble_pos+Vector2(6,7),1,Color("d3faff"))
+		text_at(str(snappedf(p.trap,.1)),pos+Vector2(7,9),8,Color("fff3c5"))
+	if p.get("torch",0)>0:item_icon(pos+Vector2(10,-5),27,10)
+	if p.kick>0:item_icon(pos+Vector2(-16,5),6,9)
 	if p.dash>0:
-		rect(pos+Vector2(-13,5),Vector2(4,1),Color("ffe08e"));rect(pos+Vector2(-12,8),Vector2(3,1),Color("ffe08e"))
-	if p.cloak>0:draw_arc(pos,10,PI,TAU,16,Color("c7a4ff"),1)
-	if p.magnet>0:draw_arc(pos,14,elapsed,elapsed+3.7,18,Color("ffb5b1"),1)
+		rect(pos+Vector2(-15,5),Vector2(4,1),Color("ffe08e"));rect(pos+Vector2(-14,8),Vector2(3,1),Color("ffe08e"))
+	if p.cloak>0:draw_arc(pos,12,PI,TAU,16,Color("c7a4ff"),1)
+	if p.magnet>0:draw_arc(pos,16,elapsed,elapsed+3.7,18,Color("ffe08e"),1)
+
+	draw_bubble_break(pos,p)
+	var tag=Vector2(pos.x-9,pos.y-27)
+	rect(tag,Vector2(18,7),COLORS[p.id].darkened(.65));rect(tag,Vector2(2,7),color)
+	text_at(("B" if p.bot else "P")+str(p.id+1),tag+Vector2(3,6),7,Color.WHITE)
+
+func draw_bubble_break(pos,p):
+	if p.pop_time<=0:return
+	var frame=clampi(int((.55-p.pop_time)/(.55/6)),0,5)
+	hd.sprite("bubble-break-v5.png",p.pop_row*6+frame,pos+Vector2(-18,-21),Vector2(36,36))
 
 func draw_hud():
-	text_at("泡泡糖",Vector2(8,15),12,CREAM)
-	text_at(Catalog.MAPS[arena].name,Vector2(130,15),12,CREAM)
-	centered(("%d:%02d" % [int(maxf(0,clock_time))/60,int(maxf(0,clock_time))%60]) if clock_time>0 else "坍塌中",15,12,Color("ffe08e"))
-	var label="冒险 %d/20" % adventure_stage if mode==3 else ("第%d关" % campaign_stage if mode==0 else ("蓝队%d : %d桃队" % [scores[0],scores[1]] if mode==2 else "第%d局 / 两胜夺冠" % round_index))
-	text_at(label,Vector2(441,15),12,CREAM)
+	text_at(Catalog.MAPS[arena].name,Vector2(8,11),9,CREAM)
+	centered(("%d:%02d" % [int(maxf(0,clock_time))/60,int(maxf(0,clock_time))%60]) if clock_time>0 else "坍塌中",11,10,Color("ffe08e"))
+	text_at(loc(MODES[mode]),Vector2(475,11),9,CREAM,155)
 	for i in range(players.size()):
-		var p=players[i]
-		var pos=Vector2(8+i*156,23)
-		panel(pos,Vector2(150,46),color_for(p).darkened(.15))
-		portrait(pos+Vector2(4,2),p.character,Vector2(16,20))
-		text_at(str(i+1)+" "+Catalog.CHARACTERS[p.character].name+("机" if p.bot else ""),pos+Vector2(23,14),12,color_for(p))
-		text_at("出局" if p.dead else ("泡%d 水%d 速%d" % [p.capacity,p.range,p.speed]),pos+Vector2(6,29),12,Color("95bdc4") if p.dead else CREAM)
-		if p.item>0:item_icon(pos+Vector2(6,29),p.item,14)
-		text_at(("机" if p.bot else ["Q","/","O","Y"][i])+" "+Catalog.ITEMS[p.item].name,pos+Vector2(23,42),12,Color(Catalog.ITEMS[p.item].color))
-	for i in range(players.size()):
-		var label_control="电脑自动对战" if players[i].bot else CONTROL_NAMES[i]
-		text_at(label_control,Vector2(8+i*156,354),12,color_for(players[i]))
+		var p=players[i];var pos=Vector2(5+i*79,16);var color=color_for(p)
+		panel(pos,Vector2(76,29),color);rect(pos+Vector2(2,2),Vector2(2,25),color)
+		face_portrait(pos+Vector2(5,2),p.character,Vector2(12,12),p.id)
+		text_at(("B" if p.bot else "P")+str(i+1),pos+Vector2(20,11),9,COLORS[p.id])
+		if p.item>0:item_icon(pos+Vector2(58,2),p.item,13)
+		text_at("出局" if p.dead else ("被困" if p.trap>0 else loc("泡%d 水%d 速%d") % [p.capacity,p.range,p.speed]),pos+Vector2(6,24),8,Color("8796a6") if p.dead else CREAM,66)
 
 func draw_sidebar():
-	panel(Vector2(8,83),Vector2(112,252),Color("648297"))
-	panel(Vector2(520,83),Vector2(112,252),Color("648297"))
+	panel(Vector2(5,55),Vector2(94,296),Color("52798b"))
+	panel(Vector2(541,55),Vector2(94,296),Color("52798b"))
 	var p=players[0]
-	text_at("我的成长",Vector2(19,101),12,Color("ffe08e"))
-	item_icon(Vector2(18,111),p.item,24)
-	text_at(Catalog.ITEMS[p.item].name,Vector2(45,127),12,Color(Catalog.ITEMS[p.item].color))
-	wrapped(Catalog.ITEMS[p.item].tip,Vector2(18,149),8,Color("a6c7c9"))
-	var kinds=[4,5,7,8,16]
-	var values=[p.capacity,p.range,p.speed,p.power,p.riding]
+	text_at("P1",Vector2(13,72),12,color_for(p))
+	item_icon(Vector2(13,82),p.item,22)
+	text_at(Catalog.ITEMS[p.item].name,Vector2(13,120),10,CREAM,78)
+	if state=="play" and notice_time>0:
+		var opacity=minf(1.0,notice_time/.4)
+		draw_rect(Rect2(10,132,84,66),Color(.10,.19,.28,.9*opacity))
+		draw_line(Vector2(11,137),Vector2(11,193),Color(1,.83,.48,opacity),1)
+		var lines=wrap_lines(loc(notice),72,9)
+		if lines.size()>4:lines=lines.slice(0,4);lines[3]+="…"
+		for i in range(lines.size()):
+			var label=lines[i]
+			if font.get_string_size(label,HORIZONTAL_ALIGNMENT_LEFT,-1,9).x>72:
+				while font.get_string_size(label+"…",HORIZONTAL_ALIGNMENT_LEFT,-1,9).x>72 and not label.is_empty():label=label.left(label.length()-1)
+				label+="…"
+			draw_string(font,Vector2(16,146+i*13),label,HORIZONTAL_ALIGNMENT_LEFT,-1,9,Color(1,.89,.66,opacity))
+	else:wrapped(Catalog.ITEMS[p.item].tip,Vector2(13,139),6,Color("aac0cc"),4)
+	var kinds=[4,5,7,8,16];var values=[p.capacity,p.range,p.speed,p.power,p.riding]
 	for i in range(5):
-		item_icon(Vector2(18,191+i*21),kinds[i],17)
-		text_at(["泡泡 ","水柱 ","跑鞋 ","强化 ","骑术 "][i]+str(values[i]),Vector2(40,204+i*21),12)
-	text_at((BubbleEffects.STYLES[p.element].name+" %d秒" % int(ceil(p.element_time))) if p.element>0 else "拾取自动换道具",Vector2(18,303),12,Color(BubbleEffects.STYLES[p.element].color))
-	text_at(Catalog.MOUNTS[p.mount].name,Vector2(18,318),12,Color("ffe08e"))
-	text_at("冒险任务" if mode==3 else "地图机关",Vector2(529,101),12,Color("ffe08e"))
+		item_icon(Vector2(13,209+i*21),kinds[i],14)
+		text_at(str(values[i]),Vector2(40,221+i*21),10,CREAM)
+	text_at(weather.label(),Vector2(13,336),9,Color("ead0a1"),79)
+	text_at("冒险任务" if mode==3 else "地图机关",Vector2(550,73),10,Color("ffe08e"),77)
 	if mode==3:
-		adventure.draw_sidebar()
-		button(Vector2(528,309),Vector2(96,20),"暂停 / 退出")
-		return
-	wrapped(Catalog.MAPS[arena].tip,Vector2(529,123),8,Color("b7d2ce"))
-	if mode in [0,2]:
-		wrapped("队友可触碰救援；同队水柱不伤队友。",Vector2(529,213),8,Color("9ce3c4"))
-	else:wrapped("困住对手后触碰获胜，或让泡泡计时结束。",Vector2(529,213),8,Color("ffc8c6"))
-	text_at("时间到后逐圈坍塌",Vector2(529,297),12,Color("ffdf8a"))
-	button(Vector2(528,309),Vector2(96,20),"暂停 / 退出")
+		wrapped(adventure.stage.objective,Vector2(550,94),6,CREAM,5)
+		wrapped(adventure.objective_label(),Vector2(550,170),6,Color("9ce3c4"),4)
+		wrapped(adventure.SIDE_QUESTS[adventure_stage-1],Vector2(550,237),6,Color("cbb2e8"),2)
+		text_at(loc("支线 %d/2") % adventure.bonus_progress,Vector2(550,281),9,Color("cbb2e8"),77)
+		text_at("复苏",Vector2(550,300),9,Color("ffe08e"),58)
+		text_at(str(adventure.revives),Vector2(615,300),9,Color("ffe08e"),15)
+	else:
+		wrapped(Catalog.MAPS[arena].tip,Vector2(550,94),6,Color("b7d2ce"),6)
+		wrapped("队友可触碰救援；同队水柱不伤队友。" if mode in [0,2] else "困住对手后触碰获胜，或让泡泡计时结束。",Vector2(550,203),6,Color("9ce3c4"),5)
+	button(Vector2(549,315),Vector2(78,25),"暂停 / 退出")
 
 func mini_board(pos,step=8):
 	var theme=Catalog.MAPS[arena].theme
@@ -1474,36 +1694,11 @@ func mini_board(pos,step=8):
 		for x in range(W):
 			var cell=grid[y][x]
 			var kind=2 if cell==1 else (3 if cell==2 else (x+y)%2)
-			draw_texture_rect_region(tiles,Rect2(pos+Vector2(x,y)*step,Vector2(step,step)),Rect2(Vector2(kind*20,theme*20),Vector2(20,20)))
+			hd.theme_sprite(theme,kind,pos+Vector2(x,y)*step,Vector2(step,step),Color.WHITE,false)
 	for c in terrain:
 		var type=terrain[c].type
 		if type in ["portal","spring","lava","switch","ice"]:
 			draw_circle(pos+Vector2(c)*step+Vector2(step/2,step/2),step*.35,Color("d5aeff") if type=="portal" else Color("ffe1aa"))
-
-func draw_menu():
-	rect(Vector2.ZERO,Vector2(640,360),Color(.04,.08,.14,.35))
-	text_at("泡泡糖",Vector2(24,53),36,Color("a4efff"))
-	text_at("像素群岛大冒险",Vector2(210,49),24,Color("ffd0c5"))
-	text_at("四十地图 / 剧情冒险 / 四人同屏",Vector2(24,77),12,CREAM)
-	panel(Vector2(20,96),Vector2(258,234),Color("83b5b6"))
-	text_at("方向键设置，回车开始",Vector2(32,119),12,Color("ffe08e"))
-	var values=[MODES[mode],("冒险%d/20（通%d）" % [adventure_stage,int(profile.adventure_cleared)]) if mode==3 else "第%d关（已通%d关）" % [campaign_stage,int(profile.cleared)] if mode==0 else ("随机地图" if selected_map<0 else Catalog.MAPS[selected_map].name),str(1 if mode==0 else humans)+"名真人",str((4 if companion else humans) if mode==3 else ((2 if campaign_stage<5 else 4) if mode==0 else (4 if mode==2 else seats)))+"个席位",(("开启" if companion else "关闭")+"电脑队友") if mode==3 else (("开启" if companion else "关闭")+"（第五关起）") if mode==0 else (("前两人一队" if team_layout==0 else "交叉对抗") if mode==2 else "各自为战"),Catalog.CHARACTERS[chosen_characters[0]].name]
-	var labels=["模式","地图","真人","人数","队伍","角色"]
-	for i in range(6):
-		var y=151+i*24
-		if i==menu_row:rect(Vector2(26,y-14),Vector2(246,21),Color("35596b"))
-		text_at(labels[i]+"  "+values[i],Vector2(32,y),12,Color("ffe08e") if i==menu_row else CREAM)
-	button(Vector2(24,300),Vector2(250,26),"开始游戏 / 回车",true)
-	panel(Vector2(290,96),Vector2(326,202),Color("92a5c4"))
-	text_at(Catalog.MAPS[arena].name,Vector2(303,116),12,Color("ffe08e"))
-	var preview_seconds=Catalog.MAPS[arena].seconds+(90 if mode==3 else 0)
-	text_at("%d:%02d" % [int(preview_seconds)/60,int(preview_seconds)%60],Vector2(552,116),12,CREAM)
-	mini_board(Vector2(358,125),9)
-	wrapped(Catalog.MAPS[arena].tip,Vector2(303,277),24,Color("d0dbd0"))
-	button(Vector2(290,304),Vector2(102,24),"地图图鉴 V")
-	button(Vector2(400,304),Vector2(102,24),"人物选择 C")
-	button(Vector2(510,304),Vector2(106,24),"局外统计 B")
-	centered("TAB 换地图 / R 随机 / F1 道具与操作 / M 声音",350,12,CREAM)
 
 func page_header(title):
 	rect(Vector2.ZERO,Vector2(640,360),Color(.04,.08,.14,.6))
@@ -1511,36 +1706,38 @@ func page_header(title):
 	button(Vector2(540,10),Vector2(80,22),"返回 ESC")
 
 func draw_map_browser():
-	page_header("四十座像素小岛")
+	page_header("群岛地图图鉴")
 	var page=int(selection/20)
 	for slot in range(20):
 		var i=page*20+slot
+		if i>=MAP_COUNT:continue
 		var map=Catalog.MAPS[i]
 		var pos=Vector2(12+(slot%4)*156,45+int(slot/4)*56)
 		panel(pos,Vector2(147,52),Color("ffe08e") if i==selection else Color("527a8c"))
 		text_at("%02d %s" % [i+1,map.name],pos+Vector2(6,17),12,Color("ffe08e") if i==selection else CREAM)
 		draw_texture_rect(backgrounds[map.theme],Rect2(pos+Vector2(7,23),Vector2(48,23)),false)
 		item_icon(pos+Vector2(59,24),[1,11,5,15,10,2,12,12,7,3,8,6,15,19,3,14,8,17,6,12][i%20],20)
-		text_at(["海港","森林","冰雪","沙漠","火山","工厂","糖果","星空","沼泽","遗迹","深海","空港","王城"][map.theme],pos+Vector2(83,39),12,Color("a8c5c4"))
+		text_at(["海港","森林","冰雪","沙漠","火山","工厂","糖果","星空","沼泽","遗迹","深海","空港","王城","洞窟"][map.theme],pos+Vector2(83,39),12,Color("a8c5c4"))
 	button(Vector2(12,331),Vector2(100,23),"上一页")
 	button(Vector2(528,331),Vector2(100,23),"下一页")
-	centered("第%d/2页 · 方向键选择 / 回车选图" % (page+1),348,12)
+	centered(loc("第%d/%d页 · 方向键选择 / 回车选图") % [page+1,int(ceil(MAP_COUNT/20.0))],348,12)
 
 func draw_characters():
 	page_header("人物与坐骑")
-	text_at("正在设置玩家 %d / TAB 切换玩家" % (character_slot+1),Vector2(32,63),12,CREAM)
+	text_at(loc("正在设置玩家 %d / TAB 切换玩家") % (character_slot+1),Vector2(32,63),12,CREAM)
+	for slot in range(humans):button(Vector2(32+slot*75,68),Vector2(65,18),"P%d" % (slot+1),slot==character_slot)
 	for i in range(8):
 		var pos=Vector2(32+i*75,92)
 		var unlocked=character_unlocked(i)
 		panel(pos,Vector2(65,86),Color("ffe08e") if i==selection else Color("648297"))
-		portrait(pos+Vector2(12,6),i,Vector2(40,48))
+		hero_sprite(pos+Vector2(12,6),i,Vector2(40,48),0,4+int(elapsed*8)%8 if i==selection else (3 if fmod(elapsed+i*.5,4)>3.86 else int(elapsed*2+i)%3))
 		text_at(Catalog.CHARACTERS[i].name,pos+Vector2(14,67),12,CREAM if unlocked else Color("829bb0"))
-		if not unlocked:text_at("通%d关" % Catalog.CHARACTERS[i].unlock,pos+Vector2(7,81),12,Color("ffc8c6"))
+		if not unlocked:text_at(loc("通%d关") % Catalog.CHARACTERS[i].unlock,pos+Vector2(7,81),12,Color("ffc8c6"))
 	var character=Catalog.CHARACTERS[selection]
 	centered(character.name+"："+character.perk,207,12,Color("ffe08e"))
 	for i in range(1,4):
 		var pos=Vector2(88+(i-1)*184,225)
-		draw_texture_rect_region(mount_art,Rect2(pos,Vector2(48,42)),Rect2(Vector2((i-1)*32,0),Vector2(32,28)))
+		hd.mount_sprite(i,3,pos,Vector2(48,42),Color.WHITE,elapsed*5)
 		text_at(Catalog.MOUNTS[i].name,pos+Vector2(54,18),12,Color(Catalog.MOUNTS[i].color))
 	button(Vector2(240,283),Vector2(160,28),"选用 / 回车" if character_unlocked(selection) else "闯关后解锁",character_unlocked(selection))
 	centered("局内成长每局重置，角色解锁和闯关进度会保存。",343,12)
@@ -1548,12 +1745,12 @@ func draw_characters():
 func draw_stats():
 	page_header("我的冒险手账")
 	panel(Vector2(28,56),Vector2(584,265),Color("83b5b6"))
-	text_at("竞技闯关 %d/20   剧情冒险 %d/20" % [int(profile.cleared),int(profile.adventure_cleared)],Vector2(46,81),12,Color("ffe08e"))
-	var names=["参加局数","获胜","失利","平局","放置泡泡","炸开箱子","拾取道具","救援队友","骑乘次数","出局次数","中途退出","游戏分钟","击败怪物","击败守护者","冒险通关次数"]
-	var values=[profile.stats.rounds,profile.stats.wins,profile.stats.losses,profile.stats.draws,profile.stats.bombs,profile.stats.crates,profile.stats.items,profile.stats.rescues,profile.stats.mounts,profile.stats.deaths,profile.stats.abandoned,int(profile.stats.seconds/60),profile.stats.monsters,profile.stats.bosses,profile.stats.pve_stages]
-	for i in range(15):
-		var pos=Vector2(46+(i%3)*186,106+int(i/3)*40)
-		text_at(names[i],pos,12,Color("abd0ca"))
+	text_at(loc("竞技闯关 %d/20   剧情冒险 %d/20") % [int(profile.cleared),int(profile.adventure_cleared)],Vector2(46,81),12,Color("ffe08e"))
+	var names=["参加局数","获胜","失利","平局","放置泡泡","炸开箱子","拾取道具","救援队友","骑乘次数","出局次数","中途退出","游戏分钟","击败怪物","击败守护者","冒险通关次数","支线勋章"]
+	var values=[profile.stats.rounds,profile.stats.wins,profile.stats.losses,profile.stats.draws,profile.stats.bombs,profile.stats.crates,profile.stats.items,profile.stats.rescues,profile.stats.mounts,profile.stats.deaths,profile.stats.abandoned,int(profile.stats.seconds/60),profile.stats.monsters,profile.stats.bosses,profile.stats.pve_stages,profile.adventure_bonus.size()]
+	for i in range(16):
+		var pos=Vector2(46+(i%4)*140,106+int(i/4)*49)
+		text_at(names[i],pos,12,Color("abd0ca"),130)
 		text_at(str(int(values[i])),pos+Vector2(0,24),24,CREAM)
 	centered("个人统计记玩家一 · 冒险击败与任务按队伍记录 · 自动存档",346,12)
 
@@ -1561,13 +1758,13 @@ func draw_help():
 	page_header("道具图鉴与操作")
 	text_at("玩家1：WASD / 空格 / Q    玩家2：方向键 / 回车 / /",Vector2(20,57),12)
 	text_at("玩家3：IJKL / U / O      玩家4：TFGH / R / Y",Vector2(20,75),12)
-	var kinds=range(1,19)+range(20,26)
+	var kinds=range(1,19)+range(20,28)
 	for slot in range(kinds.size()):
 		var i=kinds[slot]
-		var pos=Vector2(20+(slot%6)*102,86+int(slot/6)*46)
+		var pos=Vector2(18+(slot%7)*88,86+int(slot/7)*46)
 		item_icon(pos,i,24)
-		text_at(Catalog.ITEMS[i].name,pos+Vector2(0,36),12,Color(Catalog.ITEMS[i].color))
-	wrapped("水柱困住角色三秒；敌人触碰会出局，队友触碰可救援。坐骑先承受水柱，耐久耗尽才下马。走过道具自动拾取替换，成长每局重置。",Vector2(20,280),48,CREAM)
+		text_at(Catalog.ITEMS[i].name,pos+Vector2(0,36),12,Color(Catalog.ITEMS[i].color),82)
+	wrapped("轮箱可以推动；加固箱两点耐久，宝库箱八点耐久、丰厚掉落。水柱困住角色八秒，队友触碰可救援。走过道具自动拾取，成长每局重置。",Vector2(20,280),48,CREAM)
 	text_at("ESC / P 暂停，可返回大厅或保存并退出；M 声音。",Vector2(20,346),12,Color("ffe08e"))
 
 func draw_pause():
@@ -1583,10 +1780,10 @@ func draw_result():
 	if mode==3:
 		wrapped(adventure.stage.outro if result_winner==0 else "调整道具与走位，再挑战本关。章节进度已保存。",Vector2(156,158),27,Color("bfe2ce"))
 	elif mode==0:
-		centered("第%d关 / %s" % [campaign_stage,Catalog.MAPS[arena].name],162,12)
+		centered(loc("第%d关 / %s") % [campaign_stage,Catalog.MAPS[arena].name],162,12)
 		centered("进度与统计已保存",186,12,Color("a8dbc3"))
 	else:
-		var label="蓝队 %d : %d 桃队" % [scores[0],scores[1]] if mode==2 else "比分  "+" : ".join(scores.slice(0,players.size()).map(func(value):return str(value)))
+		var label=loc("蓝队 %d : %d 桃队") % [scores[0],scores[1]] if mode==2 else "比分  "+" : ".join(scores.slice(0,players.size()).map(func(value):return str(value)))
 		centered(label,168,12)
 		centered("两胜夺冠 / 统计已保存",189,12,Color("a8dbc3"))
 	var action=(("下一节" if adventure_stage<20 else "重温故事") if result_winner==0 else "重试本节") if mode==3 else ("下一关" if campaign_stage<20 else "重新冒险") if mode==0 and result_winner==0 else ("再战本关" if mode==0 else ("新一场" if match_over else "下一局"))
@@ -1602,6 +1799,7 @@ func close_game():
 	await get_tree().create_timer(.15).timeout
 	get_tree().quit()
 func _exit_tree():
+	if hero_palette:hero_palette.renders.clear()
 	if music:music.stop();music.stream=null
 	for speaker in speakers:speaker.stop();speaker.stream=null
 
@@ -1621,3 +1819,8 @@ func draw_weather():
 			var y=ORIGIN.y+25+n*27
 			var x=ORIGIN.x+fposmod(elapsed*70+n*39,W*TILE)
 			draw_line(Vector2(x,y),Vector2(x+17,y),Color("bddca2"),1)
+
+
+func _notification(what):
+	if what==NOTIFICATION_WM_WINDOW_FOCUS_OUT and state=="play":
+		pause_return="play";state="pause";paused=true;quit_selection=0

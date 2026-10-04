@@ -30,17 +30,19 @@
 *.tar.gz
 *.7z
 
-# Local previews; curated README images live in docs/screenshots
-/title.png
-/gameplay.png
-/splash.png
-/paused.png
-/result.png
-/arena-*.png
-/*-gallery.png
-/theme-*.png
-/story-*.png
-/adventure-*.png
+# Test/check screenshots belong in /tmp, not the project root.
+# Runtime artwork stays in assets/; documentation images stay in docs/screenshots/.
+/*.png
+/*.jpg
+/*.jpeg
+/*.gif
+/*.webp
+/*.mp4
+/*.webm
+/screenshots/
+/test-results/
+/coverage/
+/tmp/
 
 # Python and local tooling caches
 __pycache__/
