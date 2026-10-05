@@ -275,7 +275,7 @@ func value(field):
 		"seats":return g.loc("%d 个席位，电脑补齐") % g.seats
 		"teams":return g.loc("连续席位一队") if g.team_layout==0 else g.loc("交叉对抗")
 		"companion":return g.loc("开启") if g.companion else g.loc("关闭")
-		"characters":return g.loc("玩家 %d · %s") % [g.character_slot+1,g.loc(g.Catalog.CHARACTERS[g.slot_character(g.character_slot)].name)]
+		"characters":return g.loc("玩家 %d · %s") % [g.character_slot+1,g.loc(g.character_name(g.slot_character(g.character_slot)))]
 	return ""
 func draw_lobby():
 	heading(TITLES[g.mode],"模式大厅 · 配置完成后开始游戏")
@@ -329,15 +329,15 @@ func adjust_seat(direction):
 	elif seat_row==1:
 		g.character_slot=seat_slot
 		var value=g.slot_character(seat_slot)
-		for i in range(8):
-			value=posmod(value+direction,8)
+		for i in range(9):
+			value=posmod(value+direction,9)
 			if g.character_selectable(value):g.select_slot_character(value);break
 	elif seat_row==2 and g.mode==2:g.seat_teams[seat_slot]=1-g.slot_team(seat_slot)
 	g.save_profile()
 func draw_seat():
 	heading("席位设置",g.loc("席位 %d") % (seat_slot+1))
 	var roles=g.lobby_roles()
-	var values=[g.loc("真人") if roles[seat_slot] else g.loc("电脑"),g.loc(g.Catalog.CHARACTERS[g.slot_character(seat_slot)].name),g.loc("队伍 %d") % (g.slot_team(seat_slot)+1) if g.mode==2 else g.loc("同队") if g.mode==3 else g.loc("固定分队"),g.loc("返回大厅")]
+	var values=[g.loc("真人") if roles[seat_slot] else g.loc("电脑"),g.loc(g.character_name(g.slot_character(seat_slot))),g.loc("队伍 %d") % (g.slot_team(seat_slot)+1) if g.mode==2 else g.loc("同队") if g.mode==3 else g.loc("固定分队"),g.loc("返回大厅")]
 	var labels=["控制方式","角色选择","所属队伍","完成设置"]
 	for i in range(4):
 		var pos=Vector2(40,100+i*45);card(pos,Vector2(280,35),i==seat_row)
@@ -436,7 +436,7 @@ func draw_confirmation():
 	g.button(Vector2(145,243),Vector2(155,32),"取消",confirmation==0)
 	g.button(Vector2(335,243),Vector2(155,32),"确认恢复" if pending=="restore" else "备份并重置",confirmation==1)
 func draw_about():
-	heading("制作与版本","泡泡糖 · 像素群岛大冒险 · v4.7.9")
+	heading("制作与版本","泡泡糖 · 像素群岛大冒险 · v4.8.0")
 	card(Vector2(55,77),Vector2(530,237))
 	g.hero_sprite(Vector2(75,119),7,Vector2(110,145),0,0)
 	g.text_at("像素群岛，等你来冒险",Vector2(220,112),24,Color("ffe3ac"),340)

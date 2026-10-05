@@ -175,3 +175,34 @@ func draw_air():
 		var frame=clampi(int((.48-event.life)/.12),0,3)
 		if event.kind==0:g.hd.sprite("effects/water-vines-v473.png",frame*4+2,event.pos-Vector2.ONE*event.size/2.0,Vector2.ONE*event.size)
 		else:g.hd.sprite("effects/impacts-hd.png",frame*6+event.kind,event.pos-Vector2.ONE*event.size/2.0,Vector2.ONE*event.size)
+
+func add_shelters(pve=false):
+	var theme=g.Catalog.MAPS[g.arena].theme
+	var pools=[[5,6],[0,3,4],[7,6],[6,1,2],[7,1,2],[1,2,5],[5,0],[7,6],[0,3,4],[7,0],[7,1,2],[6,5],[7,5],[7,1,2]]
+	var total=g.terrain.values().filter(func(tile):return tile.type=="shelter").size()
+	var limit=12 if pve else 8
+	for y in range(3,g.H-3,3):
+		for x in range(3,g.W-3,3):
+			if total>=limit:break
+			var c=Vector2i(x,y)
+			var points=[c]
+			if not pve:points.append(Vector2i(g.W-1-x,g.H-1-y))
+			if points.any(func(at):return design_reserved(at,pve) or g.DIRS.any(func(d):return not g.inside(at+d) or g.grid[at.y+d.y][at.x+d.x] in [1,3] or g.terrain.has(at+d))):continue
+			var art=pools[theme][posmod(x+y+g.arena,pools[theme].size())]
+			var axis="x" if art in [1,3] else "y" if art in [2,4] else "all"
+			for at in points:g.terrain[at]={"type":"shelter","art":art,"axis":axis}
+			# A directional shelter must not seal either neighboring corridor.
+			var seen={points[0]:true};var queue=[points[0]];var head=0
+			while head<queue.size():
+				var at=queue[head];head+=1
+				for d in g.DIRS:
+					var next=at+d
+					if not seen.has(next) and g.inside(next) and g.grid[next.y][next.x] in [0,2] and g.can_cross(at,next):seen[next]=true;queue.append(next)
+			var connected=points.all(func(at):return g.DIRS.all(func(d):return seen.has(at+d)))
+			if not connected:
+				for at in points:g.terrain.erase(at)
+				continue
+			for at in points:
+				for d in g.DIRS:g.grid[at.y+d.y][at.x+d.x]=0
+			total+=points.size()
+	if g.crates:g.crates.prune()

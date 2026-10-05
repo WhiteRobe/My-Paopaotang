@@ -6,7 +6,7 @@ var bridge_open=true
 var echoes:Array=[]
 func _init(game):g=game
 func setup():
-	cells.clear();echoes.clear();timer=5;bridge_open=true
+	cells.clear();echoes.clear();timer=6 if g.rule()=="whirlpool" else 5;bridge_open=true
 	var points=[Vector2i(4,4),Vector2i(g.W-5,g.H-5),Vector2i(4,g.H-5),Vector2i(g.W-5,4),Vector2i(g.W/2,g.H/2-3),Vector2i(g.W/2,g.H/2+3)]
 	match g.rule():
 		"mud","poison","spikes","gustpads","whirlpool","mirror","geyser","chronofield":
@@ -43,14 +43,6 @@ func update(dt):
 		elif type=="clock":p.dash=maxf(p.dash,.3)
 		elif type=="gust" and p.flow<=0:
 			p.dash=maxf(p.dash,2.4);p.flow=3;g.burst(g.center(p.cell),Color("d3ffe0"),7)
-	if g.rule()=="whirlpool":
-		for b in g.bombs:
-			if b.slide!=Vector2i.ZERO or b.timer<.8:continue
-			for c in cells:
-				if g.manhattan(b.cell,c)<=3 and g.manhattan(b.cell,c)>0:
-					var d=Vector2i(signi(c.x-b.cell.x),0) if c.x!=b.cell.x else Vector2i(0,signi(c.y-b.cell.y))
-					if g.bubble_can_move(b.cell+d):b.slide=d;b.step=.22
-					break
 	if timer>0:return
 	match g.rule():
 		"poison","spikes","whirlpool":
@@ -59,7 +51,12 @@ func update(dt):
 			for c in cells:
 				if g.grid[c.y][c.x]==3:continue
 				marked.append(c)
-				if g.rule()!="spikes":
+				if g.rule()=="whirlpool":
+					for y in range(-3,4):
+						for x in range(-3,4):
+							var at=c+Vector2i(x,y)
+							if abs(x)+abs(y)<=3 and g.inside(at) and not marked.has(at):marked.append(at)
+				elif g.rule()!="spikes":
 					for d in g.DIRS:marked.append(c+d)
 			g.hazards.append({"cells":marked,"wait":1.5,"type":g.rule()})
 		"bridges":
@@ -106,3 +103,17 @@ func draw_overlay():
 	if g.rule()!="blackout" or fmod(g.round_time,12)<8:return
 	for hazard in g.hazards:
 		for c in hazard.cells:g.canvas.draw_arc(g.center(c),6,0,TAU,16,Color("ffdd9d"),1)
+
+func pull_vortex():
+	for b in g.bombs:
+		if b.slide!=Vector2i.ZERO:continue
+		var nearest=null
+		var distance=4
+		for c in cells:
+			var candidate=g.manhattan(c,b.cell)
+			if candidate>0 and candidate<distance and g.bubble_fx.clear_path(c,b.cell,3):nearest=c;distance=candidate
+		if nearest==null:continue
+		var d=Vector2i(signi(nearest.x-b.cell.x),0) if nearest.x!=b.cell.x else Vector2i(0,signi(nearest.y-b.cell.y))
+		if not g.bubble_can_move(b.cell+d) or not g.can_cross(b.cell,b.cell+d):continue
+		g.burst(g.center(b.cell),Color("a7e7f4"),4)
+		b.cell+=d;b.slide=Vector2i.ZERO;b.step=0

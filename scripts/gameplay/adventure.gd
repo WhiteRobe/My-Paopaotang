@@ -49,8 +49,8 @@ func setup():
 	for i in range(1,4):escort_stations.append(escort_cell.x+roundi(escort_distance*i/4.0))
 	for p in g.players:
 		p.team=0;p.grace=3;p.revive_wait=-1.0;p.pve_revives=1;p.cargo=0
-		# Every character begins with the same combat stats.
-		p.capacity=1;p.range=1;p.damage_level=0
+		# Character base stats apply equally in adventure and battle.
+		p.capacity=p.get("base_capacity",1);p.range=p.get("base_range",1);p.speed=p.get("base_speed",0);p.damage_level=0
 	var points=[Vector2i(5,3),Vector2i(g.W-6,g.H-4),Vector2i(g.W-6,3),Vector2i(5,g.H-4)]
 	points=points.map(func(c):return g.nearest_playable(c))
 	for c in points:clear_route(c)
@@ -146,10 +146,11 @@ func update(dt):
 			if not f.get("pulse_only",false) and f.owner>=0 and f.cell==e.cell and f.time>0:g.bubble_fx.affect_enemy(e,f);break
 		if e.dead or e.freeze>0:continue
 		if living.is_empty():continue
-		var target=living[0]
-		for p in living:
+		var visible=living.filter(func(p):return not g.concealed(p))
+		var target=visible[0] if not visible.is_empty() else {"cell":e.cell}
+		for p in visible:
 			if g.manhattan(p.cell,e.cell)<g.manhattan(target.cell,e.cell):target=p
-		var dest=target.cell
+		var dest=target.cell if not visible.is_empty() else e.cell+g.DIRS[posmod(e.serial+int(g.round_time/3),4)]
 		for decoy in g.decoys:
 			if g.manhattan(decoy.cell,e.cell)<=5:dest=decoy.cell;break
 		if e.cool<=0 and e.move>=1:
@@ -162,10 +163,10 @@ func update(dt):
 				if e.cast_time<=0:start_attack_animation(e,0)
 				if p.trap>0:g.kill_player(p,-2)
 				else:g.damage_player(p,-1)
-		if e.boss and e.attack<=0:
+		if e.boss and e.attack<=0 and not visible.is_empty():
 			e.attack=(4.2 if e.hp>e.max_hp/2 else 2.8)*[1.3,1.0,.82][g.difficulty]
 			boss_attack(e,target.cell)
-		elif not e.boss and e.kind in [1,3,4] and e.attack<=0:
+		elif not e.boss and e.kind in [1,3,4] and e.attack<=0 and not visible.is_empty():
 			e.attack=[7.0,5.5,4.5][g.difficulty];start_attack_animation(e,1.2)
 			g.hazards.append({"cells":[target.cell],"wait":1.2,"duration":1.2,"type":"monster","skill":skill_kind(e),"caster":e.serial})
 	for o in objects:

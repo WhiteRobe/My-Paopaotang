@@ -31,9 +31,9 @@ const MAPS = [
 	{"name":"回声石阵","theme":9,"rule":"echo","seconds":200,"layout":26,"tip":"每次爆炸都会留下回声，零点九秒后再次喷出水柱。"},
 	{"name":"砂钟圣殿","theme":9,"rule":"spikes","seconds":210,"layout":27,"tip":"尖刺周期升起，黄色预警后及时离开。"},
 	{"name":"珊瑚水巷","theme":10,"rule":"currents","seconds":180,"layout":28,"tip":"不同水道向相反方向流动，避免被推入水柱。"},
-	{"name":"旋潮牢湾","theme":10,"rule":"whirlpool","seconds":190,"layout":29,"tip":"漩涡会吸入泡泡，周期冲击周围区域。"},
+	{"name":"旋潮牢湾","theme":10,"rule":"whirlpool","seconds":190,"layout":29,"tip":"漩涡每六秒预警并吸引周围三格的泡泡，每次只拉动一格。"},
 	{"name":"潮汐孵化场","theme":10,"rule":"chronofield","seconds":200,"layout":30,"tip":"时钟场减慢泡泡倒计时，并短暂加速附近角色。"},
-	{"name":"铁钳竞技场","theme":10,"rule":"whirlpool","seconds":210,"layout":31,"tip":"漩涡会吸入泡泡，周期冲击周围区域。"},
+	{"name":"铁钳竞技场","theme":10,"rule":"whirlpool","seconds":210,"layout":31,"tip":"漩涡每六秒预警并吸引周围三格的泡泡，每次只拉动一格。"},
 	{"name":"风帆码头","theme":11,"rule":"gustpads","seconds":180,"layout":32,"tip":"风垫赋予两秒疾跑，掌握喷口路线。"},
 	{"name":"断桥驿路","theme":11,"rule":"bridges","seconds":190,"layout":33,"tip":"浮桥周期收起，亮起时赶快通过。"},
 	{"name":"云涡观测台","theme":11,"rule":"bridges","seconds":200,"layout":34,"tip":"浮桥周期收起，亮起时赶快通过。"},
@@ -76,17 +76,19 @@ const ITEMS = [
 	{"name":"穿透核心","kind":"active","tip":"水柱可穿过每个方向的第一只箱子。 持续二十秒。","color":"ffe9a3"},
 	{"name":"照明弹","kind":"active","tip":"全图照亮八秒，并驱散可视雾气，适用于夜晚、洞窟与雾天。","color":"fff0b3"},
 	{"name":"火把","kind":"active","tip":"二十秒内扩大自身视野，照穿附近的黑暗与雾气。","color":"ffbe7a"},
-	{"name":"高压核心","kind":"growth","tip":"PVE 专属：拾取后泡泡对怪物和 Boss 的伤害加一，最多三级；不改变箱体耐久。","color":"ff6565"}
+	{"name":"高压核心","kind":"growth","tip":"PVE 专属：拾取后泡泡对怪物和 Boss 的伤害加一，最多三级；不改变箱体耐久。","color":"ff6565"},
+	{"name":"大力丸","kind":"rare","tip":"稀有成长：水柱覆盖整行与整列，仍被墙和箱子阻挡。死亡后全部掉出。","color":"ffd479"},
+	{"name":"邪魔面具","kind":"rare","tip":"拾取即生效：50% 中毒，操作反向二十秒；50% 泡泡数量、速度、纵横水柱全部拉满。死亡后掉出。","color":"bd91ef"}
 ]
 const CHARACTERS = [
-	{"name":"蓝莓", "color":"62ceff", "style":0, "unlock":0, "perk":"开局 1 颗泡泡、1 格水柱；能力靠局内成长。"},
-	{"name":"桃桃", "color":"ff8bad", "style":1, "unlock":0, "perk":"开局 1 颗泡泡、1 格水柱；能力靠局内成长。"},
-	{"name":"薄荷", "color":"8bf2be", "style":2, "unlock":3, "perk":"开局 1 颗泡泡、1 格水柱；能力靠局内成长。"},
-	{"name":"柚子", "color":"ffcf6c", "style":3, "unlock":5, "perk":"开局 1 颗泡泡、1 格水柱；能力靠局内成长。"},
-	{"name":"雪球", "color":"d3e9ff", "style":4, "unlock":8, "perk":"开局 1 颗泡泡、1 格水柱；能力靠局内成长。"},
-	{"name":"星芽", "color":"baa2ff", "style":5, "unlock":11, "perk":"开局 1 颗泡泡、1 格水柱；能力靠局内成长。"},
-	{"name":"机仔", "color":"88d6d8", "style":6, "unlock":15, "perk":"开局 1 颗泡泡、1 格水柱；能力靠局内成长。"},
-	{"name":"火苗", "color":"ff9570", "style":7, "unlock":20, "perk":"开局 1 颗泡泡、1 格水柱；能力靠局内成长。"}
+	{"name":"蓝莓", "color":"62ceff", "style":0, "unlock":0, "capacity":2, "range":1, "speed":0, "perk":"初始泡泡 2 · 水柱 1 · 速度 0；局内可继续成长。"},
+	{"name":"桃桃", "color":"ff8bad", "style":1, "unlock":0, "capacity":1, "range":1, "speed":1, "perk":"初始泡泡 1 · 水柱 1 · 速度 1；局内可继续成长。"},
+	{"name":"薄荷", "color":"8bf2be", "style":2, "unlock":3, "capacity":1, "range":2, "speed":0, "perk":"初始泡泡 1 · 水柱 2 · 速度 0；局内可继续成长。"},
+	{"name":"柚子", "color":"ffcf6c", "style":3, "unlock":5, "capacity":1, "range":1, "speed":1, "perk":"初始泡泡 1 · 水柱 1 · 速度 1；局内可继续成长。"},
+	{"name":"雪球", "color":"d3e9ff", "style":4, "unlock":8, "capacity":2, "range":1, "speed":0, "perk":"初始泡泡 2 · 水柱 1 · 速度 0；局内可继续成长。"},
+	{"name":"星芽", "color":"baa2ff", "style":5, "unlock":11, "capacity":1, "range":2, "speed":0, "perk":"初始泡泡 1 · 水柱 2 · 速度 0；局内可继续成长。"},
+	{"name":"机仔", "color":"88d6d8", "style":6, "unlock":15, "capacity":2, "range":1, "speed":0, "perk":"初始泡泡 2 · 水柱 1 · 速度 0；局内可继续成长。"},
+	{"name":"火苗", "color":"ff9570", "style":7, "unlock":20, "capacity":1, "range":2, "speed":0, "perk":"初始泡泡 1 · 水柱 2 · 速度 0；局内可继续成长。"}
 ]
 const MOUNTS = [
 	{"name":"无坐骑", "tip":"寻找坐骑蛋。", "color":"ffffff"},

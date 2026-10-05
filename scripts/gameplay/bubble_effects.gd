@@ -32,7 +32,7 @@ func update(dt):
 				p.grace=maxf(p.grace,.5);p.shield=maxf(p.shield,1.2)
 func hostile(p,owner):
 	if owner<0:return true
-	return owner==p.id or g.players[owner].team!=p.team
+	return g.players[owner].team!=p.team
 # Short flood search blocks abilities through solid walls, crates and abyss.
 func clear_path(source,target,reach):
 	if g.manhattan(source,target)>reach:return false
@@ -44,7 +44,7 @@ func clear_path(source,target,reach):
 		if node.steps>=reach:continue
 		for direction in g.DIRS:
 			var c=node.cell+direction
-			if seen.has(c) or not g.inside(c) or g.grid[c.y][c.x]!=0:continue
+			if seen.has(c) or not g.inside(c) or g.grid[c.y][c.x]!=0 or not g.can_cross(node.cell,c):continue
 			seen[c]=true;queue.append({"cell":c,"steps":node.steps+1})
 	return false
 
@@ -53,12 +53,12 @@ func affect_player(p,f):
 	if element==5 and f.owner>=0 and (f.owner==p.id or g.players[f.owner].team==p.team):
 		if p.trap>0:g.release_player(p,f.owner)
 		p.grace=maxf(p.grace,.5);p.shield=maxf(p.shield,1.2);return
-	if not hostile(p,f.owner) or p.dead or p.trap>0 or p.grace>0:return
+	if p.dead or p.trap>0 or p.grace>0:return
 	if p.shield>0 or p.mount>0:
 		g.damage_player(p,f.owner);return
 	if element==1:p.freeze=maxf(p.freeze,1.1)
 	elif element==3:p.slow=maxf(p.slow,1.5)
-	elif element==4:p.slow=maxf(p.slow,3.0)
+	elif element==4 and hostile(p,f.owner):p.slow=maxf(p.slow,3.0)
 	g.damage_player(p,f.owner)
 func affect_enemy(e,f):
 	var element=f.get("element",0)
@@ -73,6 +73,7 @@ func extra_cells(b,cells):
 				var c=b.cell+Vector2i(x,y)
 				if not g.inside(c) or g.grid[c.y][c.x] in [1,3] or cells.has(c):continue
 				if x!=0 and y!=0 and g.grid[b.cell.y][c.x] in [1,2,3] and g.grid[c.y][b.cell.x] in [1,2,3]:continue
+				if not clear_path(b.cell,c,2):continue
 				cells.append(c)
 	elif element==3:
 		var candidates:Array=[]
@@ -99,5 +100,6 @@ func draw_fields():
 		if g.grid[field.cell.y][field.cell.x]!=0:continue
 		var age=4.0-field.time
 		var frame=0 if age<.25 else 1 if field.time>1.3 else 2 if field.time>.4 else 3
-		var tint=Color(1,1,1,minf(1,field.time/.4))
+		var friendly=field.owner>=0 and g.players[field.owner].team==g.primary_player().team
+		var tint=Color(1,1,1,minf(.38 if friendly else 1.0,field.time/.4))
 		g.hd.sprite("effects/water-vines-v473.png",frame*4+3,g.center(field.cell)-Vector2(8,7),Vector2(16,14),tint)

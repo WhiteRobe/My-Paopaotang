@@ -53,14 +53,19 @@ func prune():
 func update(dt):
 	prune()
 	for b in boxes:
-		b.flash=maxf(0,b.flash-dt);b.move=minf(1,b.move+dt/.14);b.visual=b.from.lerp(Vector2(b.cell),b.move)
+		b.flash=maxf(0,b.flash-dt);b.move=minf(1,b.move+dt/.26);b.visual=b.from.lerp(Vector2(b.cell),b.move)
 func try_push(c,dir,p):
 	var b=at(c)
-	if b==null or b.kind!="push":return false
+	if b==null or b.kind!="push" or b.move<1:return false
+	if p.push_cell!=c or p.push_dir!=dir or g.round_time-p.push_last>.10:
+		p.push_cell=c;p.push_dir=dir;p.push_started=g.round_time
+	p.push_last=g.round_time
+	if g.round_time-p.push_started<.22:return false
 	var dest=b.cell+dir
 	for tile in footprint(b,dest):
 		if not g.inside(tile) or g.grid[tile.y][tile.x]!=0 or g.bomb_at(tile)!=null or g.occupied(tile,p.id)!=null:return false
 	for tile in footprint(b):g.grid[tile.y][tile.x]=0
+	p.push_started=g.round_time;p.push_cell=dest
 	b.from=b.visual;b.cell=dest;b.move=0
 	for tile in footprint(b):g.grid[tile.y][tile.x]=2
 	rebuild();g.burst(g.center(c),Color("d4b28e"),4);g.sound("item")

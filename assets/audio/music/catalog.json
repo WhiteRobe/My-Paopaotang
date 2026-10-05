@@ -292,5 +292,33 @@
     "rms": 0.145,
     "loop_seam": 0.0003,
     "sample_rate": 32000
+  },
+  {
+    "id": "result-victory",
+    "title": "胜利：伙伴们的欢呼",
+    "scene": "result",
+    "bpm": 112,
+    "metre": 4,
+    "bars": 32,
+    "seconds": 68.57,
+    "file": "frontend/result-victory.ogg",
+    "peak": 0.6781,
+    "rms": 0.145,
+    "loop_seam": 0.0006,
+    "sample_rate": 32000
+  },
+  {
+    "id": "result-defeat",
+    "title": "失利：下一次出航",
+    "scene": "result",
+    "bpm": 84,
+    "metre": 4,
+    "bars": 24,
+    "seconds": 68.57,
+    "file": "frontend/result-defeat.ogg",
+    "peak": 0.6549,
+    "rms": 0.145,
+    "loop_seam": 0.0011,
+    "sample_rate": 32000
   }
 ]

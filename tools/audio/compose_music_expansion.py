@@ -146,4 +146,4 @@ if __name__=='__main__':
     old={e['id']:e for e in json.loads((OUT/'catalog.json').read_text())} if (OUT/'catalog.json').exists() else {}
     for spec in SCORES:
         if not args.only or spec[0] in args.only:old[spec[0]]=compose(spec)
-    (OUT/'catalog.json').write_text(json.dumps([old[s[0]] for s in SCORES if s[0] in old],ensure_ascii=False,indent=2)+'\n')
+    (OUT/'catalog.json').write_text(json.dumps(list(old.values()),ensure_ascii=False,indent=2)+'\n')

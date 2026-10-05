@@ -14,7 +14,7 @@ func light(data,colors,pos,radius,color,strength=1.0):
 	if data.size()>=40:return
 	data.append(Vector4(pos.x/g.W,pos.y/g.H,radius,strength));colors.append(Vector4(color.r,color.g,color.b,1))
 func update(dt):
-	overlay.visible=enabled and g.state=="play"
+	overlay.visible=enabled and g.state in ["play","finale","result"]
 	if not overlay.visible:return
 	overlay.position=-g.camera*g.TILE+Vector2(sin(g.elapsed*83),cos(g.elapsed*71))*g.shake
 	if blocker_image.get_width()!=g.W or blocker_image.get_height()!=g.H:
@@ -37,7 +37,7 @@ func update(dt):
 	shader_material.set_shader_parameter("fog_amount",g.weather.fog_strength if g.weather.flare_time<=0 else 0)
 	var limited=darkness>.1 or g.weather.fog_strength>.1
 	for p in g.players:
-		if limited and not p.dead:light(data,colors,p.visual+Vector2(.5,.5),5.8 if p.get("torch",0)>0 else 3.1,Color("ffdfb2") if p.get("torch",0)>0 else Color("daf2f4"),1.35 if limited else .25)
+		if limited and not p.dead and (not g.concealed(p) or p.team==g.primary_player().team):light(data,colors,p.visual+Vector2(.5,.5),5.8 if p.get("torch",0)>0 else 3.1,Color("ffdfb2") if p.get("torch",0)>0 else Color("daf2f4"),1.35 if limited else .25)
 	for c in g.weather.torches:
 		if g.grid[c.y][c.x]!=3:light(data,colors,Vector2(c)+Vector2(.5,.5),3.5,Color("ffcf96"),1.12)
 	if g.mode==3 and darkness<.3:
