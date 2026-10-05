@@ -1,7 +1,7 @@
 extends RefCounted
 
 # Frontend pages share the same match configuration and save data as the game.
-const PAGES=["menu","modes","lobby","settings","saves","save_confirm","about","seat"]
+const PAGES=["menu","modes","lobby","settings","saves","save_confirm","about","seat","advanced"]
 const TITLES=["单人闯关","自由混战","组队对战","剧情冒险 PVE"]
 const DESCRIPTIONS=["挑战二十关经典竞技地图，击败电脑对手，解锁新角色。","二至八个席位各自为战，真人与电脑混合，先赢两局夺冠。","四至八人分成两队，救援队友、配合泡泡连锁，先赢两局夺冠。","五章故事、二十个任务。和伙伴营救居民、护送车辆、挑战首领。"]
 const BADGES=["1 位真人 · 20 关","1–4 位真人 · 2–8 席位","1–4 位真人 · 4–8 席位","1–4 位真人 · 5 章故事"]
@@ -115,8 +115,12 @@ func input_key(key):
 				if seat_row==1:g.character_slot=seat_slot;open_page("characters")
 				elif seat_row==3:back()
 				else:adjust_seat(1)
+		"advanced":
+			if key in [KEY_UP,KEY_DOWN]:focus=posmod(focus+(-1 if key==KEY_UP else 1),8)
+			elif key in [KEY_LEFT,KEY_RIGHT,KEY_ENTER,KEY_SPACE]:adjust_advanced(-1 if key==KEY_LEFT else 1)
 		"lobby":
-			if key==KEY_UP:row=posmod(row-1,rows().size())
+			if key==KEY_A and g.mode in [1,2]:open_page("advanced")
+			elif key==KEY_UP:row=posmod(row-1,rows().size())
 			elif key==KEY_DOWN:row=posmod(row+1,rows().size())
 			elif key in [KEY_LEFT,KEY_RIGHT]:adjust(-1 if key==KEY_LEFT else 1)
 			elif key==KEY_ENTER:activate_row()
@@ -146,7 +150,11 @@ func input_mouse(pos):
 		"modes":
 			for i in range(4):
 				if mode_rect(i).has_point(pos):focus=i;enter_lobby(i);return
+		"advanced":
+			for i in range(8):
+				if Rect2(35,69+i*31,570,27).has_point(pos):focus=i;adjust_advanced(-1 if pos.x<340 else 1);return
 		"lobby":
+			if g.mode in [1,2] and Rect2(25,271,260,22).has_point(pos):open_page("advanced");return
 			if start_rect().has_point(pos):g.start_match();return
 			for i in range(rows().size()-1):
 				if row_rect(i).has_point(pos):
@@ -200,9 +208,6 @@ func hover(pos):
 			for i in range(4):
 				if Rect2(40,100+i*45,280,35).has_point(pos):
 					seat_row=i
-					if i==1:g.character_slot=seat_slot;open_page("characters")
-					elif i==3:back()
-					else:adjust_seat(-1 if pos.x<180 else 1)
 					return
 		"settings":
 			for i in range(6):
@@ -227,6 +232,7 @@ func draw():
 		"modes":draw_modes()
 		"lobby":draw_lobby()
 		"seat":draw_seat()
+		"advanced":draw_advanced()
 		"settings":draw_settings()
 		"saves":draw_saves()
 		"save_confirm":draw_saves();draw_confirmation()
@@ -245,7 +251,7 @@ func draw_hub():
 		g.text_at(HUB[i],r.position+Vector2(12,27 if i<2 else 21),16 if i<2 else 12,Color("ffe3a8") if focus==i else g.CREAM,r.size.x-24)
 	for i in range(3):
 		g.hero_sprite(Vector2(410+i*60,145+sin(g.elapsed*.6+i)*2),[0,1,2][i],Vector2(45,60),0,0)
-	g.hd.sprite("bubbles-hd.png",0,Vector2(462,73),Vector2(62,62))
+	g.hd.sprite("effects/bubbles-hd.png",0,Vector2(462,73),Vector2(62,62))
 	g.text_at("和伙伴一起，守护泡泡群岛",Vector2(394,250),12,Color("c7dce2"),230)
 	g.text_at(g.loc("上次模式：%s") % g.loc(TITLES[g.mode]),Vector2(37,326),10,Color("91aeba"),360)
 	g.button(Vector2(546,326),Vector2(76,23),"退出游戏",focus==8)
@@ -289,12 +295,12 @@ func draw_lobby():
 		g.text_at("电脑对手造型随关卡变化",Vector2(25,265),12,Color("a7c9d5"),260)
 	else:
 		g.text_at(g.loc("电脑补位：%d 人") % (g.seats-g.humans),Vector2(25,264),12,Color("b4ddc2"),260)
-		g.text_at("电脑角色随地图变化",Vector2(25,282),12,Color("a7c9d5"),260)
+		g.button(Vector2(25,271),Vector2(260,22),"高级规则 A")
 	g.button(start_rect().position,start_rect().size,"开始游戏",rows()[row]=="start")
 	card(Vector2(309,68),Vector2(292,137))
 	g.text_at("随机地图 · 开局揭晓" if g.selected_map<0 and g.mode in [1,2] else g.Catalog.MAPS[g.arena].name,Vector2(322,88),12,Color("ffe3a8"),272)
 	g.mini_board(Vector2(391,91),4.7)
-	var seconds=g.Catalog.MAPS[g.arena].seconds+(90 if g.mode==3 else 0)
+	var seconds=g.match_seconds(g.arena)
 	g.text_at(g.loc("倒计时 %d 秒 · 到时逐圈坍塌") % seconds,Vector2(322,199),12,Color("a2c9d3"),270)
 	if g.mode in [1,2]:g.button(Vector2(309,210),Vector2(292,24),"浏览地图 V · R 随机")
 	else:g.text_at(g.loc("已通关 %d / 20 · 左右切换已解锁关卡") % int(g.profile.adventure_cleared if g.mode==3 else g.profile.cleared),Vector2(322,221),12,Color("9cd0bd"),292)
@@ -431,10 +437,37 @@ func draw_confirmation():
 	g.button(Vector2(145,243),Vector2(155,32),"取消",confirmation==0)
 	g.button(Vector2(335,243),Vector2(155,32),"确认恢复" if pending=="restore" else "备份并重置",confirmation==1)
 func draw_about():
-	heading("制作与版本","泡泡糖 · 像素群岛大冒险 · v4.7.1")
+	heading("制作与版本","泡泡糖 · 像素群岛大冒险 · v4.7.8")
 	card(Vector2(55,77),Vector2(530,237))
 	g.hero_sprite(Vector2(75,119),7,Vector2(110,145),0,0)
 	g.text_at("像素群岛，等你来冒险",Vector2(220,112),24,Color("ffe3ac"),340)
 	g.wrapped("以圆形水泡、连锁爆炸和伙伴救援为核心，加入坐骑、元素泡泡、昼夜、迷雾与剧情任务。",Vector2(220,149),28,Color("bfdae0"),4)
 	g.wrapped("原创像素素材与主题音乐，角色及任务物件使用生成美术。Godot 引擎制作，支持中文、英文、日文、法文与德文。",Vector2(220,226),28,Color("9fc1d0"),4)
 	g.centered("本机同屏 · 最多四名真人 · 八人对战",342,12)
+
+const ADVANCED_FIELDS=["collapse","pace","daylight","fog","density","loot","mechanisms"]
+const ADVANCED_LABELS=["坍塌开始时间","坍塌速度","昼夜模式","雾气","箱子密度","道具掉落量","地图机关"]
+const ADVANCED_VALUES=[
+ ["地图默认","60 秒","90 秒","150 秒","210 秒","300 秒"],
+ ["标准 · 每圈 5 秒","快速 · 每圈 3 秒","缓慢 · 每圈 8 秒","悠闲 · 每圈 12 秒"],
+ ["地图默认","白昼","昼夜交替","恒夜"],
+ ["地图默认","关闭","开启"],
+ ["地图默认","稀疏","丰富","密集"],
+ ["标准","稀少","适中","丰富"],
+ ["开启","关闭"]]
+func adjust_advanced(direction):
+	if focus==7:g.battle_options=g.BATTLE_OPTIONS.duplicate()
+	else:
+		var field=ADVANCED_FIELDS[focus]
+		if field=="daylight" and g.selected_map>=0 and g.Catalog.MAPS[g.selected_map].get("night",false):return
+		g.battle_options[field]=posmod(g.battle_options[field]+direction,ADVANCED_VALUES[focus].size())
+	g.refresh_preview();g.save_profile()
+func draw_advanced():
+	heading("对战高级规则","设置自动保存；洞窟始终为夜晚。")
+	for i in range(8):
+		var pos=Vector2(35,69+i*31);card(pos,Vector2(570,27),focus==i)
+		g.text_at(ADVANCED_LABELS[i] if i<7 else "恢复默认规则",pos+Vector2(12,18),12,Color("a1c6d6"),210)
+		if i<7:
+			var locked=i==2 and g.selected_map>=0 and g.Catalog.MAPS[g.selected_map].get("night",false)
+			g.text_at("洞窟 · 常夜" if locked else ADVANCED_VALUES[i][g.battle_options[ADVANCED_FIELDS[i]]],pos+Vector2(258,18),12,Color("ffe3a8"),285)
+	g.centered("↑↓ 选择 · ←→ 调整 · ESC 返回大厅",343,12)

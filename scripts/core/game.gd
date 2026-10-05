@@ -91,6 +91,8 @@ var hazards: Array = []
 var elapsed = 0.0
 var round_time = 0.0
 var clock_time = 150.0
+const BATTLE_OPTIONS={"collapse":0,"pace":0,"daylight":0,"fog":0,"density":0,"loot":0,"mechanisms":0}
+var battle_options=BATTLE_OPTIONS.duplicate()
 var round_limit = 150.0
 var pickup_effects: Array = []
 var collapsed_at: Dictionary = {}
@@ -110,6 +112,10 @@ var notice = ""
 var notice_time = 0.0
 var round_recorded = true
 var music: AudioStreamPlayer
+var music_previous: AudioStreamPlayer
+var music_cache: Dictionary={}
+var current_music_path=""
+var music_fade=1.0
 var current_theme = ""
 var sounds: Dictionary = {}
 var speakers: Array = []
@@ -118,7 +124,9 @@ var save_path = "user://profile.json"
 var profile: Dictionary = {}
 
 func default_profile():
-	return {"version":4,"locale":"zh","adventure_bonus":{},"adventure_stage":1,"adventure_cleared":0,"cleared":0,"stage":1,"muted":false,"chars":[0,1,0,1],"settings":{"seat_roles":[-1,-1,-1,-1,-1,-1,-1,-1],"seat_characters":[-1,-1,-1,-1,-1,-1,-1,-1],"seat_teams":[-1,-1,-1,-1,-1,-1,-1,-1],"difficulty":1,"mode":0,"humans":1,"seats":4,"map":-1,"companion":true,"teams":0,"music_volume":75,"effects_volume":75},"stats":{"secrets":0,"pve_stages":0,"monsters":0,"bosses":0,"rounds":0,"wins":0,"losses":0,"draws":0,"bombs":0,"crates":0,"items":0,"rescues":0,"mounts":0,"deaths":0,"abandoned":0,"seconds":0.0}}
+	var data={"version":4,"locale":"zh","adventure_bonus":{},"adventure_stage":1,"adventure_cleared":0,"cleared":0,"stage":1,"muted":false,"chars":[0,1,0,1],"settings":{"seat_roles":[-1,-1,-1,-1,-1,-1,-1,-1],"seat_characters":[-1,-1,-1,-1,-1,-1,-1,-1],"seat_teams":[-1,-1,-1,-1,-1,-1,-1,-1],"difficulty":1,"mode":0,"humans":1,"seats":4,"map":-1,"companion":true,"teams":0,"music_volume":75,"effects_volume":75},"stats":{"secrets":0,"pve_stages":0,"monsters":0,"bosses":0,"rounds":0,"wins":0,"losses":0,"draws":0,"bombs":0,"crates":0,"items":0,"rescues":0,"mounts":0,"deaths":0,"abandoned":0,"seconds":0.0}}
+	for field in BATTLE_OPTIONS:data.settings["battle_"+field]=0
+	return data
 
 func _ready():
 	scale = Vector2(3,3)
@@ -145,18 +153,19 @@ func _ready():
 	i18n.set_language(profile.locale)
 	get_tree().auto_accept_quit = false
 	get_tree().root.close_requested.connect(close_game)
-	for theme in Catalog.THEMES: backgrounds.append(load("res://assets/hd/landscape-"+theme+"-hd.png"))
+	for theme in Catalog.THEMES: backgrounds.append(load("res://assets/art/maps/backgrounds/landscape-"+theme+"-hd.png"))
 	music = AudioStreamPlayer.new()
 	music.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
 	add_child(music)
-	for name in ["place","splash","pickup","item","win","trap","bubble-trap","bubble-pop"]: sounds[name] = load("res://assets/audio/"+name+".wav")
+	music_previous=AudioStreamPlayer.new();music_previous.playback_type=AudioServer.PLAYBACK_TYPE_STREAM;add_child(music_previous)
+	for name in ["place","splash","pickup","item","win","trap","bubble-trap","bubble-pop"]: sounds[name] = load("res://assets/audio/sfx/"+name+".wav")
 	for i in range(12):
 		var speaker = AudioStreamPlayer.new()
 		speaker.volume_db = -13
 		add_child(speaker)
 		speakers.append(speaker)
 	build_board(0)
-	play_theme(0)
+	update_music(0)
 	apply_audio_settings()
 
 func load_profile():
@@ -183,6 +192,9 @@ func load_profile():
 		var cleaned=[]
 		for i in range(8):cleaned.append(clampi(int(values[i]),-1,7 if field=="seat_characters" else 1) if values is Array and values.size()==8 and (values[i] is int or values[i] is float) else -1)
 		set(field,cleaned)
+	for field in BATTLE_OPTIONS:
+		var value=profile.settings.get("battle_"+field,0)
+		battle_options[field]=clampi(int(value),0,{"collapse":5,"pace":3,"daylight":3,"fog":2,"density":3,"loot":3,"mechanisms":1}[field]) if value is int or value is float else 0
 	difficulty=clampi(int(profile.settings.difficulty),0,2)
 	mode=clampi(int(profile.settings.mode),0,3)
 	humans=clampi(int(profile.settings.humans),1,4)
@@ -207,6 +219,7 @@ func save_profile():
 	profile.muted = muted
 	profile.chars = chosen_characters.duplicate()
 	profile.settings={"seat_roles":seat_roles.duplicate(),"seat_characters":seat_characters.duplicate(),"seat_teams":seat_teams.duplicate(),"difficulty":difficulty,"mode":mode,"humans":humans,"seats":seats,"map":selected_map,"companion":companion,"teams":team_layout,"music_volume":music_volume,"effects_volume":effects_volume}
+	for field in BATTLE_OPTIONS:profile.settings["battle_"+field]=battle_options[field]
 	var file = FileAccess.open(save_path+".tmp",FileAccess.WRITE)
 	if file == null:
 		announce("存档失败，请检查目录权限。")
@@ -219,30 +232,64 @@ func save_profile():
 
 func character_unlocked(index): return maxi(int(profile.get("cleared",0)),int(profile.get("adventure_cleared",0))) >= Catalog.CHARACTERS[index].unlock
 func stat(field,amount=1): profile.stats[field] = profile.stats.get(field,0) + amount
+func switch_music(path,immediate=false):
+	if current_music_path==path:return
+	if not music_cache.has(path):
+		var loaded=load(path)
+		if loaded==null:return
+		if loaded is AudioStreamOggVorbis:loaded.loop=true
+		music_cache[path]=loaded
+	music_previous.stop()
+	if music.stream!=null and not immediate and music.playing:
+		music_previous.stream=music.stream
+		music_previous.play(music.get_playback_position())
+	music.stop();music.stream=music_cache[path];current_music_path=path
+	music_fade=1.0 if immediate or music_previous.stream==null else 0.0
+	if DisplayServer.get_name()!="headless":music.play()
+	apply_audio_settings()
+
 func play_theme(theme_index):
-	var name = Catalog.THEMES[theme_index]
-	if current_theme == name and round_music=="theme": return
-	current_theme = name
-	round_music="theme"
-	music.stop()
-	var stream = load("res://assets/audio/themes/"+name+".ogg") as AudioStreamOggVorbis
-	stream.loop = true
-	music.stream = stream
-	music.volume_db = -80 if muted or music_volume==0 else -12+linear_to_db(music_volume/100.0)
-	if DisplayServer.get_name() != "headless": music.play()
+	var name=Catalog.THEMES[theme_index]
+	current_theme=name;round_music="theme"
+	var variant=(arena+round_index)%2==0
+	switch_music("res://assets/audio/music/variations/"+name+"-alt.ogg" if variant else "res://assets/audio/music/themes/"+name+".ogg")
+
+func play_game_music():
+	if mode==3 and adventure.stage.get("mission","")=="boss" and not adventure.boss_dead and state in ["play","pause"]:
+		current_theme=Catalog.THEMES[Catalog.MAPS[arena].theme];round_music="boss"
+		switch_music("res://assets/audio/music/boss/boss-"+["swamp","ruins","reef","sky","citadel"][adventure.stage.chapter]+".ogg")
+	else:play_theme(Catalog.MAPS[arena].theme)
+
 func play_round_music(kind):
+	if kind=="theme":play_game_music();return
 	if round_music==kind:return
 	round_music=kind
-	if kind=="theme":
-		current_theme="";play_theme(Catalog.MAPS[arena].theme);return
-	var stream=load("res://assets/audio/round-"+kind+".wav") as AudioStreamWAV
-	stream.loop_mode=AudioStreamWAV.LOOP_FORWARD if kind=="urgent" else AudioStreamWAV.LOOP_DISABLED
-	stream.loop_end=int(stream.get_length()*stream.mix_rate)
-	music.stream=stream;apply_audio_settings()
-	if DisplayServer.get_name()!="headless":music.play()
+	var path="res://assets/audio/cues/round-"+kind+".wav"
+	if not music_cache.has(path):
+		var stream=load(path) as AudioStreamWAV
+		stream.loop_mode=AudioStreamWAV.LOOP_FORWARD if kind=="urgent" else AudioStreamWAV.LOOP_DISABLED
+		stream.loop_end=int(stream.get_length()*stream.mix_rate);music_cache[path]=stream
+	switch_music(path,kind=="ready")
+
+func update_music(dt):
+	music_fade=minf(1.0,music_fade+dt/.45)
+	if music_fade>=1.0:music_previous.stop()
+	var page=pause_return if state=="pause" else state
+	if page=="play":
+		if countdown>0:play_round_music("ready")
+		elif clock_time<=30:play_round_music("urgent")
+		else:play_game_music()
+	elif page in ["story","result"]:play_theme(Catalog.MAPS[arena].theme)
+	else:
+		var lobby_page=page in ["lobby","seat","maps","characters"] or frontend.history.has("lobby")
+		round_music="lobby" if lobby_page else "menu"
+		switch_music("res://assets/audio/music/frontend/"+round_music+".ogg")
+	apply_audio_settings()
 
 func apply_audio_settings():
-	if music:music.volume_db=-80 if muted or music_volume==0 else -12+linear_to_db(music_volume/100.0)
+	var level=-80.0 if muted or music_volume==0 else -12+linear_to_db(music_volume/100.0)
+	if music:music.volume_db=level+linear_to_db(maxf(.001,music_fade))
+	if music_previous:music_previous.volume_db=level+linear_to_db(maxf(.001,1.0-music_fade))
 	for speaker in speakers:speaker.volume_db=-80 if muted or effects_volume==0 else -13+linear_to_db(effects_volume/100.0)
 
 func sound(name):
@@ -320,7 +367,7 @@ func new_round():
 	bubble_fx.vines.clear()
 	decoys.clear()
 	hazards.clear()
-	round_limit = Catalog.MAPS[choice].seconds+(90 if mode==3 else 0)
+	round_limit = match_seconds(choice)
 	clock_time = round_limit
 	pickup_effects.clear()
 	collapsed_at.clear()
@@ -344,10 +391,7 @@ func new_round():
 		var bot=not roles[i]
 		var character=slot_character(i)
 		var c = round_spawns(count)[i]
-		var p = {"id":i,"control":control if not bot else -1,"team":team,"bot":bot,"character":character,"cell":c,"visual":Vector2(c),"from":Vector2(c),"move":1.0,"cool":0.0,"duration":0.15,"momentum":0.0,"velocity":Vector2.ZERO,"gait":0.0,"bubble_pass":Vector2i(-1,-1),"push_cool":0.0,"drift":Vector2.ZERO,"motion_dir":Vector2i.ZERO,"starting":true,"pickup_lock":Vector2i(-1,-1),"range":1,"capacity":1,"speed":0,"power":0,"damage_level":0,"riding":0,"item":0,"element":0,"element_time":0.0,"hurt":0.0,"placing":0.0,"down":0.0,"pop_time":0.0,"pop_row":0,"trapped_elapsed":0.0,"recoil":Vector2.ZERO,"torch":0.0,"shield":0.0,"dash":0.0,"kick":0.0,"cloak":0.0,"magnet":0.0,"freeze":0.0,"slow":0.0,"trap":0.0,"grace":0.0,"warp":0.0,"flow":0.0,"think":0.0,"attack":0.0,"ai_dir":Vector2i.ZERO,"facing":Vector2i.DOWN,"steps":0,"dead":false,"mount":0,"mount_hp":0,"jump":0.0,"coins":0,"last_cell":c,"score":0}
-		if mode==0 and bot and team==1:
-			p.speed=mini(3,p.speed+int(campaign_stage/8))
-			p.capacity=mini(5,p.capacity+int(campaign_stage/10))
+		var p = {"id":i,"control":control if not bot else -1,"team":team,"bot":bot,"character":character,"cell":c,"visual":Vector2(c),"from":Vector2(c),"move":1.0,"cool":0.0,"duration":0.15,"momentum":0.0,"velocity":Vector2.ZERO,"gait":0.0,"bubble_pass":Vector2i(-1,-1),"bubble_pass_cells":[],"push_cool":0.0,"drift":Vector2.ZERO,"motion_dir":Vector2i.ZERO,"starting":true,"pickup_lock":Vector2i(-1,-1),"range":1,"capacity":1,"speed":0,"power":0,"damage_level":0,"riding":0,"item":0,"element":0,"element_time":0.0,"hurt":0.0,"placing":0.0,"down":0.0,"pop_time":0.0,"pop_row":0,"trapped_elapsed":0.0,"recoil":Vector2.ZERO,"torch":0.0,"shield":0.0,"dash":0.0,"kick":0.0,"cloak":0.0,"magnet":0.0,"freeze":0.0,"slow":0.0,"trap":0.0,"grace":0.0,"warp":0.0,"flow":0.0,"think":0.0,"attack":0.0,"ai_dir":Vector2i.ZERO,"facing":Vector2i.DOWN,"steps":0,"dead":false,"mount":0,"mount_hp":0,"jump":0.0,"coins":0,"last_cell":c,"score":0}
 		players.append(p)
 		if not bot:control+=1
 	stat("rounds")
@@ -355,8 +399,15 @@ func new_round():
 	pause_return="play"
 	if mode==3:
 		adventure.setup()
+		world_fx.design_board(true)
 		crates.setup()
 	weather.setup()
+	# Equal, reachable opening growth for every battle seat.
+	if mode!=3:
+		for p in players:
+			var inward=Vector2i(1 if p.cell.x<W/2 else -1,1 if p.cell.y<H/2 else -1)
+			for entry in [[p.cell+Vector2i(inward.x*2,0),4],[p.cell+Vector2i(0,inward.y*2),5]]:
+				if passable(entry[0]) and not drops.has(entry[0]):drops[entry[0]]=entry[1]
 
 func round_spawns(count):
 	var result=[]
@@ -373,7 +424,11 @@ func round_spawns(count):
 		result.append(SPAWNS[index])
 	return result
 
-func rule(): return Catalog.MAPS[arena].rule
+func match_seconds(index):
+	return [Catalog.MAPS[index].seconds,60,90,150,210,300][battle_options.collapse] if mode in [1,2] else Catalog.MAPS[index].seconds+(90 if mode==3 else 0)
+func collapse_step():return [5.0,3.0,8.0,12.0][battle_options.pace] if mode in [1,2] else 5.0
+func loot_chance(chance):return minf(1.0,chance*[1.0,.5,.8,1.3][battle_options.loot]) if mode in [1,2] else chance
+func rule():return "plain" if mode in [1,2] and battle_options.mechanisms==1 else Catalog.MAPS[arena].rule
 func inside(c): return c.x>=0 and c.y>=0 and c.x<W and c.y<H and not map_void.has(c)
 func center(c): return ORIGIN+Vector2(c)*TILE+Vector2(TILE/2.0,TILE/2.0)
 func bomb_at(c):
@@ -438,7 +493,9 @@ func build_board(index,playing=false):
 					17: wall = (sx-10)*(sx-10)+(sy-7)*(sy-7) in range(23,29) and sx%3!=0
 					18: wall = (sx%5==0 and sy%3!=1) or (sy%5==0 and sx%3==1)
 					19: wall = (sx in [6,14] and sy in [2,3,4,10,11,12]) or (sy in [5,9] and sx in [8,9,11,12])
-			var cell = 1 if wall else (2 if map_rng.randf()<(.53 if arena%3 else .62) else 0)
+			var density=(.53 if arena%3 else .62)
+			if mode in [1,2]:density=[density,.30,.65,.82][battle_options.density]
+			var cell = 1 if wall else (2 if map_rng.randf()<density else 0)
 			row.append(cell)
 		grid.append(row)
 	# All maps have routes through the middle and symmetrical corner exits.
@@ -454,49 +511,49 @@ func build_board(index,playing=false):
 			if y>H/2 or (y==H/2 and x>W/2): grid[y][x]=grid[H-1-y][W-1-x]
 	match rule():
 		"portal":
-			for pair in [[Vector2i(5,3),Vector2i(13,9)],[Vector2i(13,3),Vector2i(5,9)]]:
+			for pair in [[Vector2i(W/2-7,H/2-5),Vector2i(W/2+7,H/2+5)],[Vector2i(W/2+7,H/2-5),Vector2i(W/2-7,H/2+5)]]:
 				for c in pair:
 					clear_patch(c)
 					terrain[c]={"type":"portal","exit":pair[1] if c==pair[0] else pair[0]}
 		"flow":
 			for x in range(2,W-2): terrain[Vector2i(x,H/2)]={"type":"flow","dir":Vector2i.RIGHT if x<W/2 else Vector2i.LEFT}
 		"mushroom","spring":
-			for c in [Vector2i(5,4),Vector2i(13,8),Vector2i(5,8),Vector2i(13,4),Vector2i(10,7)]:
+			for c in [Vector2i(W/2-6,H/2-4),Vector2i(W/2+6,H/2+4),Vector2i(W/2-6,H/2+4),Vector2i(W/2+6,H/2-4),Vector2i(W/2,H/2)]:
 				clear_patch(c)
 				terrain[c]={"type":"spring"}
 		"vine":
-			for c in [Vector2i(5,3),Vector2i(13,9),Vector2i(5,9),Vector2i(13,3),Vector2i(7,6),Vector2i(11,6)]:
+			for c in [Vector2i(W/2-6,H/2-5),Vector2i(W/2+6,H/2+5),Vector2i(W/2-6,H/2+5),Vector2i(W/2+6,H/2-5),Vector2i(W/2-2,H/2),Vector2i(W/2+2,H/2)]:
 				grid[c.y][c.x]=2
 				vine_cells.append(c)
 		"ice":
-			for y in range(3,10):
-				for x in range(5,14):
+			for y in range(H/2-4,H/2+5):
+				for x in range(W/2-5,W/2+6):
 					if grid[y][x]==0: terrain[Vector2i(x,y)]={"type":"ice"}
 		"sand":
-			for y in range(2,11):
-				for x in range(3,16):
-					if grid[y][x]==0 and (x+y)%3==0: terrain[Vector2i(x,y)]={"type":"sand"}
+			for y in range(H/2-5,H/2+6):
+				for x in range(W/2-7,W/2+8):
+					if grid[y][x]==0 and (abs(x-W/2)+abs(y-H/2))%3==0: terrain[Vector2i(x,y)]={"type":"sand"}
 		"gate":
-			for c in [Vector2i(5,6),Vector2i(13,6),Vector2i(9,3),Vector2i(9,9)]:
+			for c in [Vector2i(W/2-7,H/2),Vector2i(W/2+7,H/2),Vector2i(W/2,H/2-5),Vector2i(W/2,H/2+5)]:
 				gates.append(c)
 				grid[c.y][c.x]=1
-			for c in [Vector2i(3,5),Vector2i(15,7)]:
+			for c in [Vector2i(W/2-9,H/2-2),Vector2i(W/2+9,H/2+2)]:
 				clear_patch(c)
 				terrain[c]={"type":"switch"}
 		"lava":
-			for c in [Vector2i(5,6),Vector2i(13,6),Vector2i(9,4),Vector2i(9,8),Vector2i(7,5),Vector2i(11,7)]:
+			for c in [Vector2i(W/2-7,H/2),Vector2i(W/2+7,H/2),Vector2i(W/2,H/2-4),Vector2i(W/2,H/2+4),Vector2i(W/2-3,H/2-2),Vector2i(W/2+3,H/2+2)]:
 				grid[c.y][c.x]=0
 				terrain[c]={"type":"lava"}
 		"treasure":
-			for c in [Vector2i(5,3),Vector2i(13,9),Vector2i(5,9),Vector2i(13,3),Vector2i(7,6),Vector2i(11,6),Vector2i(9,5),Vector2i(9,7)]:
+			for c in [Vector2i(W/2-7,H/2-5),Vector2i(W/2+7,H/2+5),Vector2i(W/2-7,H/2+5),Vector2i(W/2+7,H/2-5),Vector2i(W/2-3,H/2),Vector2i(W/2+3,H/2),Vector2i(W/2,H/2-3),Vector2i(W/2,H/2+3)]:
 				grid[c.y][c.x]=2
 				gold_boxes[c]=true
 		"laser":
-			for y in [3,6,9]:
+			for y in [H/2-5,H/2,H/2+5]:
 				for x in range(1,W-1): grid[y][x]=0
 		"train":
 			for x in range(1,W-1): terrain[Vector2i(x,H/2)]={"type":"rail"}
-	for c in [Vector2i(10,7),Vector2i(7,6),Vector2i(11,6)]:
+	for c in [Vector2i(W/2,H/2),Vector2i(W/2-2,H/2),Vector2i(W/2+2,H/2)]:
 		if grid[c.y][c.x]==0: terrain[c]=terrain.get(c,{"type":"supply"})
 
 	if playing and mode==3:
@@ -509,6 +566,7 @@ func build_board(index,playing=false):
 	for c in SPAWNS:
 		clear_patch(c)
 		for d in [Vector2i.ZERO]+DIRS:terrain.erase(c+d)
+	if world_fx:world_fx.design_board(false)
 	if crates:crates.setup()
 	if weather:weather.setup()
 
@@ -653,7 +711,7 @@ func next_character(value,direction):
 	return 0
 func refresh_preview():
 	build_board((20+adventure_stage-1) if mode==3 else (campaign_stage-1 if mode==0 else maxi(0,selected_map)))
-	play_theme(Catalog.MAPS[arena].theme)
+	update_music(0)
 func pause_action(choice):
 	if choice==0: state=pause_return;paused=false
 	elif choice==1: return_to_menu()
@@ -670,6 +728,7 @@ func return_to_menu():
 	refresh_preview()
 
 func _process(dt):
+	update_music(dt)
 	if state=="pause":
 		if lighting:lighting.update(0)
 		queue_redraw()
@@ -774,7 +833,7 @@ func update_game(dt):
 	for d in decoys:d.time-=dt
 	decoys=decoys.filter(func(d):return d.time>0)
 	if clock_time<=0:
-		var ring=mini(H/2-1,int(-clock_time/5))
+		var ring=mini(H/2-1,int(-clock_time/collapse_step()))
 		if ring>sudden_ring:sudden_ring=ring;flood_ring(ring+1)
 	if mode==3:
 		adventure.update(dt)
@@ -782,23 +841,25 @@ func update_game(dt):
 	var alive: Dictionary={}
 	for p in players:
 		if not p.dead:alive[p.team]=true
-	if alive.size()<=1 or clock_time<=-float(H/2)*5:
+	if alive.size()<=1 or clock_time<=-float(H/2)*collapse_step():
 		finish_round(alive.keys()[0] if alive.size()==1 else -1)
 	elif rule()=="treasure":
-		for p in players:
-			if p.coins>=5:finish_round(p.team);break
+		var team_coins={}
+		for p in players:team_coins[p.team]=team_coins.get(p.team,0)+p.coins
+		for team in team_coins:
+			if team_coins[team]>=5:finish_round(team);break
 
 func move_duration(p):
-	var speed=.18-.012*p.speed
+	var speed=.22-.012*p.speed
 	if p.dash>0:speed*=.66
 	if p.mount==1:speed*=.75
 	elif p.mount==2:speed*=1.1
 	elif p.mount==3:speed*=.86
-	if p.mount>0:speed*=1-.06*p.riding
+	if p.mount>0:speed*=1-.035*p.riding
 	if p.freeze>0 or p.slow>0:speed*=1.9
 	if rule()=="gravity":speed*=.8
 	if terrain.has(p.cell) and terrain[p.cell].type=="sand":speed*=1.65
-	return maxf(.065,speed)
+	return maxf(.12,speed)
 
 func move_player(p,input_direction,dt):
 	var dir=Vector2(input_direction).limit_length(1)
@@ -827,12 +888,17 @@ func move_player(p,input_direction,dt):
 	p.last_cell=p.cell
 	p.cell=Vector2i(roundf(p.visual.x),roundf(p.visual.y))
 	var travelled=before.distance_to(p.visual)
+	if travelled>.001:
+		var movement=p.visual-before
+		p.facing=Vector2i(signf(movement.x),0) if absf(movement.x)>absf(movement.y) else Vector2i(0,signf(movement.y))
+		p.motion_dir=p.facing
 	var previous_step=int(p.gait*2)
 	p.gait+=travelled
 	p.steps=int(p.gait)
 	p.move=0.0 if travelled>.0001 else 1.0
 	p.momentum=clampf(p.velocity.length()/speed,0,1)
 	if int(p.gait*2)>previous_step:world_fx.footstep(ORIGIN+p.visual*TILE+Vector2(8,13),p.facing,p.mount>0)
+	p.bubble_pass_cells=p.bubble_pass_cells.filter(func(c):return bomb_at(c)!=null and absf(p.visual.x-c.x)<=.76 and absf(p.visual.y-c.y)<=.76)
 	if p.bubble_pass!=Vector2i(-1,-1) and (absf(p.visual.x-p.bubble_pass.x)>.76 or absf(p.visual.y-p.bubble_pass.y)>.76):p.bubble_pass=Vector2i(-1,-1)
 
 func movement_blocked(p,position,dir):
@@ -855,7 +921,7 @@ func movement_blocked(p,position,dir):
 						if passable(landing,p):teleport(p,landing);p.jump=.8
 					return true
 			var bubble=bomb_at(c)
-			if bubble!=null and c!=p.bubble_pass:
+			if bubble!=null and not p.bubble_pass_cells.has(c):
 				if p.kick>0 and dir!=Vector2i.ZERO:kick_bomb(bubble,dir)
 				if bomb_at(c)!=null:return true
 	for other in players:
@@ -930,13 +996,26 @@ func kill_player(p):
 	sound("bubble-pop")
 
 func random_drop():
-	if mode==3 and rng.randf()<.20:return 28
-	if (weather.nightness>.2 or weather.fog_strength>.2) and rng.randf()<.28:return rng.randi_range(26,27)
-	return rng.randi_range(20,25) if rng.randf()<.24 else rng.randi_range(1,18)
+	if mode==3 and rng.randf()<.12:return 28
+	if (weather.nightness>.2 or weather.fog_strength>.2) and rng.randf()<.16:return rng.randi_range(26,27)
+	var roll=rng.randf()
+	if roll<.50:return [4,5,7,8][rng.randi_range(0,3)]
+	if roll<.55:return 15
+	if roll<.58:return 16
+	if roll<.74:return rng.randi_range(20,25)
+	return [1,2,3,6,9,10,11,12,13,14,17,18][rng.randi_range(0,11)]
+
+func growth_full(p,kind):
+	return (kind==4 and p.capacity>=6) or (kind==5 and p.range>=8) or (kind==7 and p.speed>=5) or (kind==8 and p.power>=3) or (kind==16 and p.riding>=3) or (kind==28 and p.damage_level>=3)
+
+func bubble_fuse(p):return (3.4 if rule()=="gravity" else 2.3)-.1*p.power
+
+func mount_durability(p):return (2 if p.mount==2 else 1)+mini(2,p.riding)
 
 func pickup(p,c):
 	if not drops.has(c):return
 	var kind=int(drops[c])
+	if growth_full(p,kind):return
 	var category=Catalog.ITEMS[kind].kind
 	if category=="active" and p.pickup_lock==c:return
 	if category=="active" and c!=p.cell and p.item!=0:return
@@ -957,12 +1036,12 @@ func pickup(p,c):
 			announce(loc("泡泡伤害提升至 %d！") % (1+p.damage_level))
 		15:
 			p.mount=rng.randi_range(1,3)
-			p.mount_hp=(2 if p.mount==2 else 1)+p.riding
+			p.mount_hp=mount_durability(p)
 			if p.get("control",p.id)==0:stat("mounts")
 			announce(Catalog.MOUNTS[p.mount].name+"陪你出战！")
 		16:
 			p.riding=mini(3,p.riding+1)
-			if p.mount>0:p.mount_hp=mini(5,p.mount_hp+1)
+			if p.mount>0:p.mount_hp=mini(mount_durability(p),p.mount_hp+1)
 		19:p.coins+=1
 		_:p.item=kind
 	if p.get("control",p.id)==0:stat("items")
@@ -1000,7 +1079,7 @@ func use_item(i):
 			if dist<distance and bomb_at(other.cell)==null and bomb_at(p.cell)==null:distance=dist;target=other
 		if mode==3:
 			for enemy in adventure.enemies:
-				if enemy.dead:continue
+				if enemy.dead or enemy.boss:continue
 				var dist=manhattan(p.cell,enemy.cell)
 				if dist<distance and bomb_at(enemy.cell)==null and bomb_at(p.cell)==null and occupied(enemy.cell,i)==null:distance=dist;target=enemy
 		if target==null:return
@@ -1025,7 +1104,7 @@ func use_item(i):
 		for b in bombs.duplicate():
 			if b.owner==i and bombs.has(b):explode(b)
 	elif kind in [1,9]:
-		release_player(p)
+		if p.trap>0:release_player(p)
 		if kind==1:p.shield=8
 	elif kind==2:p.dash=6
 	elif kind==6:p.kick=8
@@ -1034,8 +1113,8 @@ func use_item(i):
 		bubble_fx.infuse(p,1,8)
 		if mode==3:adventure.freeze_nearby(p)
 		for other in players:
-			if not other.dead and other.team!=p.team and manhattan(other.cell,p.cell)<=3:
-				other.freeze=2;burst(center(other.cell),Color("bfefff"),10)
+			if not other.dead and other.team!=p.team and other.trap<=0 and other.grace<=0 and bubble_fx.clear_path(p.cell,other.cell,3):
+				other.freeze=maxf(other.freeze,2);burst(center(other.cell),Color("bfefff"),10)
 	elif kind==13:decoys.append({"cell":p.cell,"team":p.team,"character":p.character,"time":10.0})
 	elif kind==14:p.magnet=5
 	elif kind==26:weather.flare_time=8;announce("照明弹升空：全图照亮八秒！")
@@ -1053,10 +1132,12 @@ func place_bomb(i,cell=null):
 	var c=p.cell if cell==null else cell
 	if bombs.filter(func(b):return b.owner==i).size()>=p.capacity or bomb_at(c)!=null or not inside(c):return false
 	if grid[c.y][c.x] in [1,3]:return false
-	var fuse=3.4 if rule()=="gravity" else 2.3
+	var fuse=bubble_fuse(p)
 	bombs.append({"cell":c,"owner":i,"range":p.range,"power":p.power,"timer":fuse,"fuse":fuse,"slide":Vector2i.ZERO,"step":0.0,"element":p.element,"damage":1+p.damage_level})
 	for player in players:
-		if absf(player.visual.x-c.x)<.76 and absf(player.visual.y-c.y)<.76:player.bubble_pass=c
+		if absf(player.visual.x-c.x)<.76 and absf(player.visual.y-c.y)<.76:
+			player.bubble_pass=c
+			if not player.bubble_pass_cells.has(c):player.bubble_pass_cells.append(c)
 	if p.get("control",p.id)==0:stat("bombs")
 	p.attack=.85;p.placing=.32
 	world_fx.impact(center(c),0,24)
@@ -1126,7 +1207,8 @@ func kick_bomb(b,dir):
 	burst(center(dest),Color("baffaf"),5)
 	sound("place")
 func drop_supply():
-	var locations=[Vector2i(10,7),Vector2i(7,6),Vector2i(11,6),Vector2i(9,4),Vector2i(9,8)]
+	var hub=adventure.checkpoint if mode==3 else Vector2i(W/2,H/2)
+	var locations=[hub,hub+Vector2i(-2,0),hub+Vector2i(2,0),hub+Vector2i(0,-2),hub+Vector2i(0,2)]
 	locations.shuffle()
 	var count=0
 	for c in locations:
@@ -1136,7 +1218,6 @@ func drop_supply():
 			if f.cell==c:burning=true
 		if burning:continue
 		drops[c]=random_drop()
-		if count==0 and round_time>35:drops[c]=15
 		burst(center(c),Color("ffdf73"),12)
 		count+=1
 		if count>=2:break
@@ -1165,7 +1246,7 @@ func update_mechanisms(dt):
 				announce("地震！泡泡提前爆炸！")
 			"laser":
 				mechanism_time=7
-				var y=[3,6,9][int(round_time/7)%3]
+				var y=[H/2-5,H/2,H/2+5][int(round_time/7)%3]
 				var cells: Array=[]
 				for x in range(1,W-1):cells.append(Vector2i(x,y))
 				hazards.append({"cells":cells,"wait":1.2,"type":"laser"})
@@ -1195,7 +1276,9 @@ func update_mechanisms(dt):
 			for c in hazard.cells:
 				if inside(c) and grid[c.y][c.x] not in [1,3]:
 					if grid[c.y][c.x]==2:crates.damage(c,-1,hit_boxes)
-					blasts.append({"cell":c,"time":.6,"owner":-1,"hazard":hazard.type})
+					var hit={"cell":c,"time":.6,"duration":.6,"owner":-1,"hazard":hazard.type}
+					if hazard.has("skill"):hit.skill=hazard.skill;hit.caster=hazard.caster
+					blasts.append(hit)
 					burst(center(c),Color("ffe68a"),3)
 			hazards.erase(hazard)
 			shake=2;sound("splash")
@@ -1353,7 +1436,7 @@ func bot_direction(p,danger):
 	for c in drops:
 		var kind=int(drops[c])
 		if Catalog.ITEMS[kind].kind=="active" and p.item!=0:continue
-		if (kind==4 and p.capacity>=6) or (kind==5 and p.range>=8) or (kind==7 and p.speed>=5) or (kind==8 and p.power>=3) or (kind==28 and p.damage_level>=3):continue
+		if growth_full(p,kind):continue
 		var distance=manhattan(c,p.cell)-3
 		if distance<best:target=c;best=distance
 	if target!=null:
@@ -1369,7 +1452,20 @@ func bot_actions(p,danger):
 		var should_use=false
 		match int(p.item):
 			1,9,11:should_use=danger.has(p.cell) or p.trap>0
-			3:should_use=bombs.any(func(b):return b.owner==p.id and not blast_cells(b).has(p.cell))
+			3:
+				var owned=bombs.filter(func(b):return b.owner==p.id)
+				var trigger=[]
+				for b in owned:trigger.append(b)
+				var marked={}
+				while not trigger.is_empty():
+					var bomb=trigger.pop_front()
+					if marked.has(bomb.cell):continue
+					marked[bomb.cell]=true
+					var cells=blast_cells(bomb)
+					if cells.has(p.cell):marked[p.cell]=true;break
+					for next in bombs:
+						if cells.has(next.cell) and not marked.has(next.cell):trigger.append(next)
+				should_use=not owned.is_empty() and not marked.has(p.cell)
 			6:should_use=DIRS.any(func(d):return bomb_at(p.cell+d)!=null)
 			10:should_use=DIRS.any(func(d):return inside(p.cell+d) and grid[p.cell.y+d.y][p.cell.x+d.x]==2)
 			12,13,17:should_use=players.any(func(other):return not other.dead and other.team!=p.team and manhattan(other.cell,p.cell)<=4)
@@ -1386,7 +1482,7 @@ func bot_actions(p,danger):
 		var c=p.cell+d
 		if inside(c) and grid[c.y][c.x]==2:wants_bomb=true
 	if not wants_bomb:return
-	var virtual={"cell":p.cell,"range":p.range,"timer":2.3,"owner":p.id,"element":p.element}
+	var virtual={"cell":p.cell,"range":p.range,"timer":bubble_fuse(p),"owner":p.id,"element":p.element}
 	var coverage=blast_cells(virtual)
 	var effective=coverage.any(func(c):return grid[c.y][c.x]==2) or players.any(func(other):return not other.dead and other.team!=p.team and coverage.has(other.cell))
 	if mode==3:effective=effective or adventure.enemies.any(func(e):return not e.dead and coverage.has(e.cell)) or adventure.objects.any(func(o):return not o.active and o.type=="beacons" and coverage.has(o.cell))
@@ -1453,20 +1549,43 @@ func button(pos,size,label,selected=false):
 	var width=font.get_string_size(localized,HORIZONTAL_ALIGNMENT_LEFT,-1,px).x
 	if width>size.x-8:px=maxi(7,int(px*(size.x-8)/width));width=font.get_string_size(localized,HORIZONTAL_ALIGNMENT_LEFT,-1,px).x
 	canvas.draw_string(font,pos+Vector2((size.x-width)/2,size.y/2+5),localized,HORIZONTAL_ALIGNMENT_LEFT,-1,px,Color("ffe08e") if selected else CREAM)
-# One red square is one HP. Large health pools wrap instead of becoming a continuous bar.
+# Small pools show one square per HP; large pools use ten segments and an exact count.
 func health_bar(pos,hp,maximum,width=20,height=2):
-	var cell_width=float(height)
-	var columns=mini(maximum,maxi(1,int((width+.6)/(cell_width+.6))))
-	pos.x+=(width-(columns*cell_width+(columns-1)*.6))*.5
-	for n in range(maximum):
-		var at=pos+Vector2((n%columns)*(cell_width+.6),int(n/columns)*(height+.7))
-		rect(at-Vector2(.25,.25),Vector2(cell_width+.5,height+.5),INK)
-		rect(at,Vector2(cell_width,height),Color("ed454e") if n<hp else Color("493139"))
+	if maximum<=0:return
+	var remaining=clampi(hp,0,maximum)
+	var counted=maximum>10
+	var slots=mini(maximum,10)
+	var label="×%d" % remaining
+	var badge_width=8+font.get_string_size(label,HORIZONTAL_ALIGNMENT_LEFT,-1,7).x if counted else 0.0
+	var gap=.5
+	var available=maxf(width-2-(badge_width+3 if counted else 0),slots+(slots-1)*gap)
+	var cell_width=minf(float(height), (available-(slots-1)*gap)/slots)
+	var bar_width=slots*cell_width+(slots-1)*gap
+	var total_width=bar_width+(badge_width+3 if counted else 0)
+	var row_height=maxf(float(height),7 if counted else height)
+	pos+=Vector2((width-total_width)*.5,0)
+	rect(pos-Vector2(1,1),Vector2(total_width+2,row_height+2),Color(.06,.11,.17,.42))
+	rect(pos-Vector2(.5,.5),Vector2(total_width+1,.5),Color(.39,.44,.51,.55))
+	var filled=ceili(float(remaining)*slots/maximum) if counted else remaining
+	for n in range(slots):
+		var at=pos+Vector2(n*(cell_width+gap),(row_height-height)*.5)
+		rect(at,Vector2(cell_width,height),Color("ee4558") if n<filled else Color(.22,.17,.22,.55))
+		if n<filled:
+			rect(at,Vector2(cell_width,.5),Color("ff98a1"))
+			rect(at+Vector2(0,height-.5),Vector2(cell_width,.5),Color("a32642"))
+	if counted:
+		var heart=pos+Vector2(bar_width+3,.5)
+		var outline=PackedVector2Array([Vector2(0,1),Vector2(1,0),Vector2(2,0),Vector2(3,1),Vector2(4,0),Vector2(5,0),Vector2(6,1),Vector2(6,3),Vector2(3,6),Vector2(0,3)])
+		for n in range(outline.size()):outline[n]+=heart
+		canvas.draw_colored_polygon(outline,Color("ef4960"))
+		outline.append(outline[0]);canvas.draw_polyline(outline,Color("9c233b"),.6)
+		rect(heart+Vector2(1,1),Vector2(1.5,.7),Color("ffbec4"))
+		canvas.draw_string(font,heart+Vector2(8,6),label,HORIZONTAL_ALIGNMENT_LEFT,-1,7,Color("fff0df"))
 
 func item_icon(pos,kind,side=20):
 	if kind<=0:return
-	if kind==28:hd.sprite("pressure-core-v464.png",0,pos,Vector2.ONE*side)
-	else:hd.sprite("remote-hd.png" if kind==3 else "items-hd.png",0 if kind==3 else kind,pos,Vector2.ONE*side)
+	if kind==28:hd.sprite("items/pressure-core-v464.png",0,pos,Vector2.ONE*side)
+	else:hd.sprite("items/remote-hd.png" if kind==3 else "items/items-hd.png",0 if kind==3 else kind,pos,Vector2.ONE*side)
 func premium_hero_region(character,direction=0):return hd.region(HDArt.HERO_VIEWS[direction],character)
 func hero_piece(pos,size,source,part,offset=Vector2.ZERO,tint=Color.WHITE,direction=0):
 	var ratio=size/Vector2(96,112)
@@ -1477,24 +1596,23 @@ func hero_sprite(pos,character,size,direction=0,pose=0,tint=Color.WHITE,seated=f
 	var source=premium_hero_region(character,direction)
 	var index=character
 	if pose in range(4,12) and not seated:
-		var walk_name="walk-"+HDArt.WALK_NAMES[character]+"-hd.png"
+		var walk_name="characters/walk/walk-"+HDArt.WALK_NAMES[character]+"-hd.png"
 		if hd.regions.has(walk_name):
 			name=walk_name
 			var phase=(walk_phase if walk_phase>=0 else (pose-4)*1.5) if pose in range(4,12) else 0.0
 			var frames=int(hd.regions[name].size()/4)
 			index=direction*frames+posmod(int(phase*frames/12.0),frames);source=hd.region(name,index)
 	if direction==0 and not seated and (pose in range(12,16) or pose in range(20,24)):
-		name="hero-actions-hd.png"
+		name="characters/actions/hero-actions-hd.png"
 		var action=mini(2,pose-12)+4 if pose<16 else pose-20
 		index=action*8+character;source=hd.region(name,index)
 	if pose in range(16,20) and not seated:
-		name="hero-trapped-v5.png"
+		name="characters/actions/hero-trapped-v5.png"
 		index=(pose-16)*8+character;source=hd.region(name,index)
 	if seated:source.size.y*=.64
 	var baseline=source.size
-	if name.begins_with("walk-"):
-		baseline=Vector2.ZERO
-		for frame in hd.regions[name]:baseline=baseline.max(Vector2(frame[2],frame[3]))
+	if name.begins_with("characters/walk/"):
+		baseline=hd.animation_baseline(name)
 	var drawn=source.size*minf(size.x/baseline.x,size.y/baseline.y)
 	var at=pos+Vector2((size.x-drawn.x)/2,size.y-drawn.y)
 	var hurt=pose in range(12,16)
@@ -1565,13 +1683,13 @@ func draw_tile(c):
 			hd.theme_sprite(theme,0,pos+Vector2(inset,inset+age*8),Vector2(TILE-2*inset,TILE-2*inset),Color.WHITE,false)
 		return
 	hd.theme_sprite(theme,kind,pos,Vector2(TILE,TILE),Color.WHITE,false)
-	if gates.has(c) and cell==0:hd.sprite("mechanisms-v472.png",3,pos,Vector2.ONE*TILE,Color.WHITE,false)
+	if gates.has(c) and cell==0:hd.sprite("maps/mechanisms/mechanisms-v472.png",3,pos,Vector2.ONE*TILE,Color.WHITE,false)
 
 func draw_obstacle(c):
 	var theme=Catalog.MAPS[arena].theme
 	var pos=ORIGIN+Vector2(c)*TILE
 	var cell=grid[c.y][c.x]
-	if gates.has(c) and cell==1:hd.sprite("mechanisms-v472.png",10,pos,Vector2.ONE*TILE,Color.WHITE,false)
+	if gates.has(c) and cell==1:hd.sprite("maps/mechanisms/mechanisms-v472.png",10,pos,Vector2.ONE*TILE,Color.WHITE,false)
 	else:hd.theme_sprite(theme,2 if cell==1 else 3,pos,Vector2(TILE,TILE),Color.WHITE,false)
 	if cell==2 and vine_cells.has(c):
 		canvas.draw_line(pos+Vector2(6,17),pos+Vector2(8,2),Color("95c989"),2)
@@ -1597,13 +1715,15 @@ func draw_terrain():
 		if tile.type in ["flow","gust"]:
 			var dir=tile.get("dir",Vector2i.RIGHT);index=7 if dir.y!=0 else 6;reverse=dir.x<0 or dir.y<0
 		if reverse:canvas.draw_set_transform(pos+Vector2(sin(elapsed*83),cos(elapsed*71))*shake,PI)
-		hd.sprite("mechanisms-v472.png",index,Vector2(-8,-8) if reverse else pos-Vector2(8,8),Vector2.ONE*TILE,tint,false)
+		hd.sprite("maps/mechanisms/mechanisms-v472.png",index,Vector2(-8,-8) if reverse else pos-Vector2(8,8),Vector2.ONE*TILE,tint,false)
 		if reverse:canvas.draw_set_transform(Vector2(sin(elapsed*83),cos(elapsed*71))*shake)
 
 	for hazard in hazards:
 		for c in hazard.cells:
 			if hazard.type=="laser":continue
-			if inside(c):canvas.draw_arc(center(c),6,0,TAU,32,Color("ffbb65"),.8)
+			if inside(c):
+				if hazard.has("skill"):adventure.draw_skill_warning(hazard,c)
+				else:canvas.draw_arc(center(c),6,0,TAU,32,Color("ffbb65"),.8)
 	if clock_time<=3:
 		for y in range(1,H-1):
 			for x in range(1,W-1):
@@ -1637,7 +1757,7 @@ func draw_laser_segment(f):
 
 func draw_laser_emitters():
 	if rule()!="laser":return
-	for row in [3,6,9]:
+	for row in [H/2-5,H/2,H/2+5]:
 		var intensity=0.0
 		for hazard in hazards:
 			if hazard.type=="laser" and not hazard.cells.is_empty() and hazard.cells[0].y==row:intensity=maxf(intensity,clampf(1-hazard.wait/1.2,0,1))
@@ -1646,7 +1766,7 @@ func draw_laser_emitters():
 		for x in [0,W-1]:
 			var pos=center(Vector2i(x,row))
 			canvas.draw_set_transform(pos,0,Vector2(-1,1) if x==W-1 else Vector2.ONE)
-			hd.sprite("mechanisms-v472.png",9,Vector2(-8,-8),Vector2(16,16))
+			hd.sprite("maps/mechanisms/mechanisms-v472.png",9,Vector2(-8,-8),Vector2(16,16))
 			canvas.draw_set_transform(Vector2(sin(elapsed*83),cos(elapsed*71))*shake)
 			canvas.draw_circle(pos+Vector2(-3 if x==W-1 else 3,0),1.2,Color(1,.8,.4,.3+intensity*.7))
 
@@ -1656,7 +1776,7 @@ func draw_bomb(b):
 	var element=b.get("element",0)
 	var color=color_for(p) if element==0 else Color(BubbleEffects.STYLES[element].color)
 	var pulse=sin(elapsed*(15 if b.timer<.7 else 4))*.25
-	hd.sprite("bubbles-hd.png",element,pos-Vector2(7+pulse,7+pulse),Vector2.ONE*(14+pulse*2))
+	hd.sprite("effects/bubbles-hd.png",element,pos-Vector2(7+pulse,7+pulse),Vector2.ONE*(14+pulse*2))
 	canvas.draw_arc(pos,6.7+pulse,0,TAU,48,Color(color,.7),.45)
 	if element>0:
 		canvas.draw_arc(pos,7.3,elapsed*2,elapsed*2+4.5,20,color.lightened(.3),1)
@@ -1666,69 +1786,42 @@ func draw_bomb(b):
 	rect(pos+Vector2(-5,8),Vector2(10*clampf(b.timer/b.fuse,0,1),1),CREAM)
 func draw_warning(b):
 	for c in blast_cells(b):canvas.draw_rect(Rect2(ORIGIN+Vector2(c)*TILE+Vector2(2,2),Vector2(16,16)),Color(1,.93,.62,.7),false,1)
+func draw_water_piece(pos,frame,part,size,angle,tint):
+	canvas.draw_set_transform(pos+Vector2(sin(elapsed*83),cos(elapsed*71))*shake,angle)
+	hd.sprite("effects/water-vines-v473.png",frame*4+part,-size/2,size,tint,false)
+	canvas.draw_set_transform(Vector2(sin(elapsed*83),cos(elapsed*71))*shake)
+
 func draw_splash(f):
+	if f.has("skill"):adventure.draw_skill_hit(f);return
 	if f.get("hazard","")=="laser":draw_laser_segment(f);return
 	var pos=center(f.cell)
 	var element=f.get("element",0)
-	var color=Color(BubbleEffects.STYLES[element].color) if element>0 else Color("69dfff")
-	if f.owner<0:color=Color("ffcf8c")
-	var lifetime=f.get("duration",.6)
-	var age=clampf(1-f.time/lifetime,0,1)
-	var opacity=minf(1,f.time/.13)
-	var rise=clampf(age/.14,0,1)
-	var width=(4.8+sin(age*PI)*1.1)*rise
+	var age=clampf(1-f.time/f.get("duration",.6),0,1)
+	var frame=0 if age<.14 else 1 if age<.55 else 2 if age<.82 else 3
+	var tint=Color.WHITE if element==0 else Color(BubbleEffects.STYLES[element].color).lightened(.2)
+	if f.owner<0:tint=Color("ffd09b")
+	tint.a=minf(1,f.time/.12)
 	var links=f.get("links",[])
-	if links.is_empty():links=DIRS
-	# Connected jets replace the repeated square crosses. Curved foam follows their flow.
-	for direction in links:
-		var axis=Vector2(direction)
-		var side=Vector2(-axis.y,axis.x)
-		var points=PackedVector2Array()
-		for n in range(7):
-			var along=n/6.0
-			var wave=sin(along*TAU-age*17+f.cell.x*.7+f.cell.y)*.55
-			points.append(pos+axis*(along*(TILE*.5+.5))+side*wave)
-		canvas.draw_polyline(points,Color(color.darkened(.32),opacity*.7),width*2.3,false)
-		canvas.draw_polyline(points,Color(color,opacity*.85),width*1.7,false)
-		canvas.draw_polyline(points,Color(color.lightened(.5),opacity*.9),width*.85,false)
-		var foam=PackedVector2Array()
-		for n in range(points.size()):foam.append(points[n]+side*(sin(n*.8-age*16)*.5-width*.35))
-		canvas.draw_polyline(foam,Color(.91,1,1,opacity*.9),.55,false)
-		var travel=fmod(age*4+float(f.cell.x+f.cell.y)*.13,1.0)
-		var droplet=pos+axis*(travel*TILE*.55)+side*width*.7
-		canvas.draw_circle(droplet,.8,Color(.95,1,1,opacity))
-		if f.get("origin",f.cell)==f.cell:
-			var spray=pos+axis*(4+age*12)+side*sin(age*12)*2
-			canvas.draw_circle(spray,1.2*(1-age),Color(color.lightened(.65),opacity))
-	canvas.draw_circle(pos,width,Color(color.lightened(.2),opacity*.7))
-	if f.get("origin",f.cell)==f.cell:
-		canvas.draw_arc(pos,3+age*10,0,TAU,48,Color(.87,.98,1,opacity*(1-age)),.65)
-	if element==1:
-		for angle in range(3):
-			var axis=Vector2.from_angle(angle*PI/3+age)
-			canvas.draw_line(pos-axis*3,pos+axis*3,Color(.92,.98,1,opacity),.55)
-	elif element==2:
-		for n in range(3):
-			var at=pos+Vector2(n*3-3,-fmod(age*24+n*3,10))
-			canvas.draw_circle(at,1.1,Color(1,.91,.56,opacity))
-	elif element==3:
-		var zig=PackedVector2Array([pos+Vector2(-3,-3),pos+Vector2(0,-1),pos+Vector2(-1,2),pos+Vector2(3,4)])
-		canvas.draw_polyline(zig,Color(1,.95,1,opacity),.8,false)
-	elif element==4:
-		for n in range(2):
-			var at=pos+Vector2.from_angle(age*8+n*PI)*3
-			canvas.draw_arc(at,1.5,age,age+PI*1.6,8,Color(.85,1,.65,opacity),.7)
-	elif element in [5,6]:
-		canvas.draw_line(pos-Vector2(2,0),pos+Vector2(2,0),Color(1,.98,.88,opacity),.65)
-		canvas.draw_line(pos-Vector2(0,2),pos+Vector2(0,2),Color(1,.98,.88,opacity),.65)
+	if links.is_empty():
+		draw_water_piece(pos,frame,2,Vector2(13,13),0,tint);return
+	if links.size()==1:
+		var direction=-Vector2(links[0])
+		draw_water_piece(pos,frame,1,Vector2(TILE+.6,10),direction.angle(),tint)
+	else:
+		for axis in [Vector2i.RIGHT,Vector2i.DOWN]:
+			if links.has(axis) and links.has(-axis):draw_water_piece(pos,frame,0,Vector2(TILE+.6,9),Vector2(axis).angle(),tint)
+			else:
+				for direction in [axis,-axis]:
+					if links.has(direction):draw_water_piece(pos+Vector2(direction)*4,frame,0,Vector2(9,9),Vector2(direction).angle(),tint)
+	if f.get("origin",f.cell)==f.cell:draw_water_piece(pos,frame,2,Vector2(13,13),0,tint)
 
 func draw_actor(pos,p):
 	if p.dead:
 		var death_phase=clampi(int((1.05-p.down)/.35),0,2)
 		var size=Vector2(20,25) if death_phase==0 else Vector2(27,18) if death_phase==1 else Vector2(29,12)
-		var source=hd.region("hero-death-v5.png",death_phase*8+p.character)
+		var source=hd.region("characters/actions/hero-death-v5.png",death_phase*8+p.character)
 		var drawn=source.size*minf(size.x/source.size.x,size.y/source.size.y)
-		canvas.draw_texture_rect(hero_palette.texture_for(p.id,false,hd.textures["hero-death-v5.png"],source),Rect2(pos+Vector2(-drawn.x/2,5-drawn.y),drawn),false)
+		canvas.draw_texture_rect(hero_palette.texture_for(p.id,false,hd.textures["characters/actions/hero-death-v5.png"],source),Rect2(pos+Vector2(-drawn.x/2,5-drawn.y),drawn),false)
 		draw_bubble_break(pos,p)
 		return
 	var color=color_for(p)
@@ -1754,7 +1847,7 @@ func draw_actor(pos,p):
 		hd.mount_sprite(p.mount,direction,pos+Vector2(-15,-19+bob),Vector2(30,24),tint,phase if walking else 0.0)
 		var seated_pose=pose if p.hurt>0 or p.trap>0 or p.placing>0 else 0
 		hero_sprite(pos+Vector2(-9,-29+bob),p.character,Vector2(18,20),direction,seated_pose,tint,true,-1.0,p.id)
-		health_bar(pos+Vector2(-6,14),p.mount_hp,(2 if p.mount==2 else 1)+p.riding,12,2)
+		health_bar(pos+Vector2(-6,14),p.mount_hp,mount_durability(p),12,2)
 	else:hero_sprite(pos+Vector2(-11,-20+bob),p.character,Vector2(22,25),direction,pose,tint,false,p.gait*6,p.id)
 	if p.hurt>0:
 		var hit=1-p.hurt/.48
@@ -1770,7 +1863,7 @@ func draw_actor(pos,p):
 	if p.trap>0:
 		var bubble_pos=pos+Vector2(0,-5)
 		canvas.draw_circle(bubble_pos,14,Color(.36,.72,.95,.15))
-		hd.sprite("bubbles-hd.png",7,bubble_pos-Vector2(15,15),Vector2(30,30))
+		hd.sprite("effects/bubbles-hd.png",7,bubble_pos-Vector2(15,15),Vector2(30,30))
 		canvas.draw_arc(bubble_pos+Vector2(-1,-1),13,3.5,4.5,12,Color("efffff"),2)
 		canvas.draw_circle(bubble_pos+Vector2(6,7),1,Color("d3faff"))
 		text_at(str(snappedf(p.trap,.1)),pos+Vector2(7,9),8,Color("fff3c5"))
@@ -1789,7 +1882,7 @@ func draw_actor(pos,p):
 func draw_bubble_break(pos,p):
 	if p.pop_time<=0:return
 	var frame=clampi(int((.55-p.pop_time)/(.55/6)),0,5)
-	hd.sprite("bubble-break-v5.png",p.pop_row*6+frame,pos+Vector2(-18,-21),Vector2(36,36))
+	hd.sprite("effects/bubble-break-v5.png",p.pop_row*6+frame,pos+Vector2(-18,-21),Vector2(36,36))
 
 func draw_hud():
 	text_at(Catalog.MAPS[arena].name,Vector2(8,11),9,CREAM)
@@ -1972,6 +2065,7 @@ func close_game():
 func _exit_tree():
 	if hero_palette:hero_palette.renders.clear()
 	if music:music.stop();music.stream=null
+	if music_previous:music_previous.stop();music_previous.stream=null
 	for speaker in speakers:speaker.stop();speaker.stream=null
 
 func draw_weather():
@@ -2045,8 +2139,8 @@ func draw_world():
 		match entry.kind:
 			"wall":draw_obstacle(entry.data)
 			"turret":map_rules.draw_turret(entry.data)
-			"lamp":hd.sprite("missions-hd.png",2,center(entry.data)-Vector2(6,8),Vector2(12,14))
-			"train":hd.sprite("fauna-hd.png",8,center(entry.data)-Vector2(8,10),Vector2(16,18))
+			"lamp":hd.sprite("missions/missions-hd.png",2,center(entry.data)-Vector2(6,8),Vector2(12,14))
+			"train":hd.sprite("maps/decorations/fauna-hd.png",8,center(entry.data)-Vector2(8,10),Vector2(16,18))
 			"box":crates.draw_box(entry.data)
 			"torch":weather.draw_torch(entry.data)
 			"drop":draw_drop(entry.data)
@@ -2063,6 +2157,7 @@ func draw_world():
 				portrait(center(entry.data.cell)-Vector2(10,15),entry.data.character)
 				canvas.draw_arc(center(entry.data.cell),9,0,TAU,20,Color("d8abef"),1)
 	draw_laser_emitters()
+	if mode==3:adventure.draw_skill_travel()
 	for f in blasts:draw_splash(f)
 
 	for effect in pickup_effects:

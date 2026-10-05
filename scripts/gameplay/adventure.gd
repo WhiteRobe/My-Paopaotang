@@ -1,4 +1,5 @@
 extends RefCounted
+const SKILL_COLORS=["9ad05f","76dcef","c5b2ff","84b866","e8be72","73b5f3","b7deff","bda1dd"]
 const Story=preload("res://scripts/data/story.gd")
 var g
 var stage:Dictionary={}
@@ -17,6 +18,7 @@ var escort_timer=0.0
 var escort_hit=0.0
 var revives=2
 var spawn_serial=0
+var party_scale=1.0
 const SIDE_QUESTS=[
  "寻回浅滩萤灯","净化毒蕈泉眼","收集营地罗盘","唤醒树王根脉",
  "修复镜光铭文","重启回廊齿轮","找回回声石片","校准砂钟刻印",
@@ -35,16 +37,19 @@ var checkpoint=Vector2i(10,7)
 func _init(game):g=game
 func setup():
 	stage=Story.STAGES[g.adventure_stage-1].duplicate(true)
+	var human_count=g.players.filter(func(p):return not p.bot).size()
+	var bot_count=g.players.size()-human_count
+	party_scale=1.0+.45*maxi(0,human_count-1)+.15*bot_count
 	var instructions={"collect":"每人携带一件，返回中央出口交付。","rescue":"接触居民即可完成救援。","beacons":"按标号顺序，用水柱点亮信标。","escort":"跟随车辆，在三个补给站停留充能。","survive":"守住出口，利用支线奖励抵御增援。","waves":"击败每波敌人，利用地图机关与核心。","boss":"观察攻击预警；半血后守护者会加快攻击。"}
 	stage.intro[2][1]+=" "+instructions[stage.mission]
 	enemies.clear();objects.clear();dialogue=0;progress=0;wave=0;wave_wait=0;objective_done=false;boss_dead=false
-	escort_cell=Vector2i(3,g.H/2);escort_visual=Vector2(escort_cell);escort_hp=8;escort_timer=0;escort_hit=0;revives=2;spawn_serial=0;bonus_progress=0;escort_fuel=0;escort_stops.clear();bonus_objects.clear()
+	escort_cell=Vector2i(3,g.H/2);escort_visual=Vector2(escort_cell);escort_hp=8;escort_timer=0;escort_hit=0;revives=[3,2,1][g.difficulty];spawn_serial=0;bonus_progress=0;escort_fuel=0;escort_stops.clear();bonus_objects.clear()
 	checkpoint=Vector2i(g.W/2,g.H/2);g.clear_patch(checkpoint)
 	escort_goal=checkpoint;escort_arrived=false;escort_distance=escort_goal.x-escort_cell.x;escort_stations.clear()
 	for i in range(1,4):escort_stations.append(escort_cell.x+roundi(escort_distance*i/4.0))
 	for p in g.players:
 		p.team=0;p.grace=3;p.revive_wait=-1.0;p.pve_revives=1;p.cargo=0
-		# Adventurers begin ready for crowds, while pickups still provide growth.
+		# Every character begins with the same combat stats.
 		p.capacity=1;p.range=1;p.power=0;p.damage_level=0
 	var points=[Vector2i(5,3),Vector2i(g.W-6,g.H-4),Vector2i(g.W-6,3),Vector2i(5,g.H-4)]
 	points=points.map(func(c):return g.nearest_playable(c))
@@ -65,7 +70,11 @@ func setup():
 			spawn_group(2+int(stage.chapter/2))
 	for c in [Vector2i(8,11),Vector2i(12,3)]:
 		clear_route(c);bonus_objects.append({"cell":c,"active":false,"charge":0.0,"type":["collect","hold","water"][(g.adventure_stage-1)%3]})
-	g.drops[Vector2i(3,3)]=28
+	for p in g.players:
+		var start=p.cell+Vector2i(2,0)
+		for entry in [[start,4],[p.cell+Vector2i(0,2),5]]:
+			if g.passable(entry[0]) and not g.drops.has(entry[0]):g.drops[entry[0]]=entry[1]
+	g.drops[g.nearest_playable(g.players[0].cell+Vector2i(1,0))]=28
 	g.state="story"
 	g.profile.adventure_stage=g.adventure_stage;g.save_profile()
 func clear_route(c):
@@ -77,12 +86,14 @@ func clear_route(c):
 func spawn_enemy(c,kind,boss=false):
 	c=g.nearest_playable(c)
 	if not g.passable(c):g.clear_patch(c)
-	var hp=(10+stage.chapter*2) if boss else (1+int(stage.chapter/2))
+	var hp=maxi(6,roundi((10+stage.chapter*3)*party_scale*[.85,1.0,1.2][g.difficulty])) if boss else (1+int(stage.chapter/2)+(1 if g.difficulty==2 else 0)+(1 if party_scale>=2 else 0))
 	enemies.append({"cell":c,"visual":Vector2(c),"from":Vector2(c),"move":1.0,"duration":.4,"cool":0.0,"hit":0.0,"freeze":0.0,"slow":0.0,"attack":2.5,"kind":kind,"hp":hp,"max_hp":hp,"boss":boss,"dead":false,"serial":spawn_serial,"anim_clock":spawn_serial*.137,"walk_clock":0.0,"facing":Vector2i.RIGHT,"reaction":0.0,"cast_time":0.0,"cast_total":0.0,"cast_wait":0.0,"death_age":0.0})
 	spawn_serial+=1
 func spawn_group(count):
 	var positions=[Vector2i(g.W/3,3),Vector2i(g.W-7,g.H/2),Vector2i(g.W/2,g.H-5),Vector2i(5,g.H/2),Vector2i(g.W-12,5),Vector2i(g.W/3,g.H-8),Vector2i(g.W-10,g.H-8)]
+	count=clampi(count+([-1,0,1][g.difficulty])+int(party_scale-1),1,9)
 	for i in range(count):
+		if enemies.filter(func(e):return not e.dead and not e.boss).size()>=12:break
 		var c=g.nearest_playable(positions[(i+spawn_serial)%positions.size()])
 		if g.grid[c.y][c.x]==3:continue
 		if enemies.any(func(e):return not e.dead and e.cell==c):continue
@@ -92,8 +103,9 @@ func spawn_wave():
 func advance_dialogue():
 	dialogue+=1
 	if dialogue>=stage.intro.size():g.state="play";g.countdown=1.5
-func hit_enemy(e,damage=1):
-	if e.dead or e.hit>0:return
+func hit_enemy(e,damage=1,pulse=false):
+	# Separate bubble explosions may each hit; lingering hazards retain a cooldown.
+	if e.dead or (e.hit>0 and not pulse):return
 	e.hp=maxi(0,e.hp-damage);e.hit=.7;e.reaction=.5;
 	if not e.boss:e.freeze=maxf(e.freeze,.45)
 	g.burst(g.center(e.cell),Color("edcfad"),8);g.sound("splash")
@@ -142,7 +154,7 @@ func update(dt):
 		if e.cool<=0 and e.move>=1:
 			var d=enemy_direction(e,target,dest)
 			var next=e.cell+d
-			if d!=Vector2i.ZERO and escort_cell!=escort_goal and g.passable(next) and not enemies.any(func(other):return other!=e and not other.dead and other.cell==next):
+			if d!=Vector2i.ZERO and g.passable(next) and not enemies.any(func(other):return other!=e and not other.dead and other.cell==next):
 				e.from=e.visual;e.facing=d;e.cell=next;e.move=0;e.duration=.65 if e.boss else (.46+.025*e.kind);e.duration*=[1.25,1.0,.86][g.difficulty];e.duration*=1.5 if e.slow>0 else 1.0;e.cool=e.duration
 		for p in living:
 			if p.visual.distance_to(e.visual)<(.85 if e.boss else .60):
@@ -153,7 +165,7 @@ func update(dt):
 			boss_attack(e,target.cell)
 		elif not e.boss and e.kind in [1,3,4] and e.attack<=0:
 			e.attack=[7.0,5.5,4.5][g.difficulty];start_attack_animation(e,1.2)
-			g.hazards.append({"cells":[target.cell],"wait":1.2,"type":"monster"})
+			g.hazards.append({"cells":[target.cell],"wait":1.2,"duration":1.2,"type":"monster","skill":skill_kind(e),"caster":e.serial})
 	for o in objects:
 		if o.active:continue
 		if o.type=="beacons":
@@ -189,9 +201,9 @@ func update(dt):
 		"survive":
 			progress=mini(stage.target,int(g.round_time));objective_done=progress>=stage.target
 			wave_wait-=dt
-			if wave_wait<=0 and not objective_done:wave_wait=10;spawn_group(2)
+			if wave_wait<=0 and not objective_done:wave_wait=[12,10,8][g.difficulty];spawn_group(2)
 		"escort":
-			if not escort_arrived and living.any(func(p):return g.manhattan(p.cell,escort_cell)<=3):
+			if not escort_arrived and living.any(func(p):return p.trap<=0 and g.manhattan(p.cell,escort_cell)<=3):
 				escort_timer-=dt
 				if escort_timer<=0:
 					if escort_cell.x in escort_stations and not escort_stops.has(escort_cell.x):
@@ -257,7 +269,7 @@ func boss_attack(e,target):
 			marked.append(target)
 			if enemies.filter(func(other):return not other.dead).size()<6:spawn_group(2)
 	marked=marked.filter(func(c):return g.inside(c))
-	g.hazards.append({"cells":marked,"wait":1.6 if e.hp>e.max_hp/2 else 1.1,"type":"boss"})
+	g.hazards.append({"cells":marked,"wait":1.6 if e.hp>e.max_hp/2 else 1.1,"duration":1.6 if e.hp>e.max_hp/2 else 1.1,"type":"boss","skill":skill_kind(e),"caster":e.serial})
 	g.announce(stage.boss+"蓄力！避开亮起的区域。")
 func bot_target(p):
 	if objective_done or p.get("cargo",0)>0:return checkpoint
@@ -283,9 +295,9 @@ func should_bomb(p):
 	return stage.mission=="beacons" and objects.any(func(o):return not o.active and o.type=="beacons" and g.manhattan(p.cell,o.cell)<=p.range)
 func freeze_nearby(p):
 	for e in enemies:
-		if not e.dead and g.manhattan(e.cell,p.cell)<=3:e.freeze=2.5;g.burst(g.center(e.cell),Color("bbf2ff"),8)
+		if not e.dead and g.bubble_fx.clear_path(p.cell,e.cell,3):e.freeze=maxf(e.freeze,.65 if e.boss else 2.0);g.burst(g.center(e.cell),Color("bbf2ff"),8)
 func object_icon(pos,kind,size=20,tint=Color.WHITE):
-	g.hd.sprite("missions-hd.png",kind,pos,Vector2.ONE*size,tint)
+	g.hd.sprite("missions/missions-hd.png",kind,pos,Vector2.ONE*size,tint)
 
 func draw_checkpoint():
 	# Footprint, rather than sprite height, determines depth.
@@ -338,7 +350,8 @@ func draw_enemy(e):
 	g.hd.enemy_frame(e.kind,pose.x,pose.y,Vector2(-size/2.0,-size*.75),size,tint)
 	g.canvas.draw_set_transform(Vector2(sin(g.elapsed*83),cos(g.elapsed*71))*g.shake)
 	if e.dead:return
-	g.health_bar(pos+Vector2(-20 if e.boss else -10,11),e.hp,e.max_hp,40 if e.boss else 20,3)
+	draw_cast_magic(e,pos,size)
+	g.health_bar(pos+Vector2(-24 if e.boss else -10,11),e.hp,e.max_hp,48 if e.boss else 20,3)
 	if e.freeze>0:g.canvas.draw_arc(pos,12,0,TAU,20,Color("b2e9ff"),1)
 
 func start_attack_animation(e,wait):
@@ -416,3 +429,46 @@ func enemy_direction(e,target,dest):
 			var flank=dest+g.DIRS[e.serial%4]*(2 if g.difficulty==2 else 1)
 			if g.passable(flank) and not blocked.has(flank):dest=flank
 	return g.route_direction({"cell":e.cell,"cloak":0,"id":-1},dest,blocked)
+
+func skill_kind(e):
+	return [3,4,5,6,7][clampi(e.kind-6,0,4)] if e.boss else [7,0,4,1,2,7][clampi(e.kind,0,5)]
+
+func draw_cast_magic(e,pos,size):
+	if e.cast_time<=0:return
+	var elapsed=e.cast_total-e.cast_time
+	var charging=elapsed<e.cast_wait
+	var progress=clampf(elapsed/maxf(.01,e.cast_wait),0,1) if charging else clampf((elapsed-e.cast_wait)/.45,0,1)
+	var frame=0 if charging else 1 if progress<.4 else 2 if progress<.75 else 3
+	var side=(9+progress*5 if charging else 17-progress*7)*(1.25 if e.boss else 1.0)
+	var alpha=.45+progress*.35 if charging else 1-progress*.65
+	g.hd.sprite("effects/monster-skills-v474.png",frame*8+skill_kind(e),pos+Vector2(size*.3-side/2,-size*.15-side/2),Vector2.ONE*side,Color(1,1,1,alpha))
+
+func draw_skill_warning(hazard,c):
+	var pos=g.center(c)
+	var progress=clampf(1-hazard.wait/hazard.get("duration",1.6),0,1)
+	var color=Color(SKILL_COLORS[hazard.skill])
+	g.canvas.draw_rect(Rect2(pos-Vector2(7,7),Vector2(14,14)),Color(color,.055+progress*.07))
+	for corner in [Vector2(-7,-7),Vector2(7,-7),Vector2(-7,7),Vector2(7,7)]:
+		var at=pos+corner
+		g.canvas.draw_line(at,at-Vector2(signf(corner.x)*3,0),Color(color,.65+progress*.3),.65)
+		g.canvas.draw_line(at,at-Vector2(0,signf(corner.y)*3),Color(color,.65+progress*.3),.65)
+	g.hd.sprite("effects/monster-skills-v474.png",hazard.skill,pos-Vector2(4,4),Vector2(8,8),Color(1,1,1,.25+progress*.4))
+
+func draw_skill_hit(f):
+	var age=clampf(1-f.time/f.get("duration",.6),0,1)
+	var frame=1 if age<.32 else 2 if age<.7 else 3
+	var side=14+sin(age*PI)*2
+	g.hd.sprite("effects/monster-skills-v474.png",frame*8+f.skill,g.center(f.cell)-Vector2.ONE*side/2,Vector2.ONE*side,Color(1,1,1,minf(1,f.time/.15)))
+
+func draw_skill_travel():
+	for hazard in g.hazards:
+		if not hazard.has("skill") or hazard.type!="monster" or hazard.wait>.35 or hazard.cells.is_empty():continue
+		var caster=null
+		for e in enemies:
+			if e.serial==hazard.caster and not e.dead:caster=e;break
+		if caster==null:continue
+		var progress=clampf(1-hazard.wait/.35,0,1)
+		var start=g.ORIGIN+caster.visual*g.TILE+Vector2(8,2)
+		var end=g.center(hazard.cells[0])
+		var pos=start.lerp(end,progress)-Vector2(0,sin(progress*PI)*5)
+		g.hd.sprite("effects/monster-skills-v474.png",hazard.skill,pos-Vector2(4,4),Vector2(8,8))

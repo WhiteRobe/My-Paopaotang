@@ -50,7 +50,8 @@ func update(dt):
 	for f in g.blasts:
 		if not limited and f.get("pulse_only",false):continue
 		if data.size()>=40:break
-		light(data,colors,Vector2(f.cell)+Vector2(.5,.5),2.2,(Color("ff693e") if f.get("hazard","")=="laser" else Color(g.BubbleEffects.STYLES[f.get("element",0)].color)),.8*minf(1,f.time*3))
+		var color=Color(g.Adventure.SKILL_COLORS[f.skill]) if f.has("skill") else Color("ff693e") if f.get("hazard","")=="laser" else Color(g.BubbleEffects.STYLES[f.get("element",0)].color)
+		light(data,colors,Vector2(f.cell)+Vector2(.5,.5),2.2,color,.8*minf(1,f.time*3))
 	var count=data.size()
 	while data.size()<40:data.append(Vector4.ZERO);colors.append(Vector4.ZERO)
 	shader_material.set_shader_parameter("light_count",count);shader_material.set_shader_parameter("light_data",data);shader_material.set_shader_parameter("light_colors",colors)

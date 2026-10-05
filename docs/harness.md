@@ -43,7 +43,7 @@ python3 tools/harness.py build-macos
 
 每次调用创建 `/tmp/paopaotang-harness-<随机后缀>/`，终端打印实际路径。报告为 `report.json`，包含命令、引擎路径、版本、状态、错误或内容概况。引擎日志和 stdout 日志分别保存，失败时显示日志末尾。
 
-`check` 与 `pack` 使用 `tools/harness_smoke.gd` 作为启动桥接：实例化真实 `main.tscn`，在加入场景树、触发 `_ready()` 之前，将 `game.save_path` 设置为本次 `/tmp` 下的 `profile.json`。这样既不会读取真实玩家存档，也不会覆盖它。桥接只用于 harness，不改变正常游戏入口。`pack` 的桥接从外部文件加载，游戏资源从导出 PCK 读取；不把开发工具塞进发布包。
+`check` 与 `pack` 使用 `tools/checks/harness_smoke.gd` 作为启动桥接：实例化真实 `main.tscn`，在加入场景树、触发 `_ready()` 之前，将 `game.save_path` 设置为本次 `/tmp` 下的 `profile.json`。这样既不会读取真实玩家存档，也不会覆盖它。桥接只用于 harness，不改变正常游戏入口。`pack` 的桥接从外部文件加载，游戏资源从导出 PCK 读取；不把开发工具塞进发布包。
 
 `content.json` 从实际加载的目录读取地图、主题、道具、人物、坐骑、剧情和语言计数，并核对地图数量、主题资源与剧情引用。`item_entries` 包含空道具和星币，`mount_entries` 包含无坐骑项，不能直接当作玩家可用种数。
 

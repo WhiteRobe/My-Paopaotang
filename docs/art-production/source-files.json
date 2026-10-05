@@ -1,0 +1,429 @@
+[
+  {
+    "name": "items-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-683fe38b-5c0d-4991-9441-bcf6e9cd80b4.png",
+    "resource": "assets/art/items/items-hd.png"
+  },
+  {
+    "name": "creatures-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-5e8c9533-669d-4181-9c6e-cb0e833a8d5c.png",
+    "resource": "assets/art/monsters/creatures-hd.png"
+  },
+  {
+    "name": "missions-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-f9a4fc92-4a8c-4c16-885e-32f5fa52892e.png",
+    "resource": "assets/art/missions/missions-hd.png"
+  },
+  {
+    "name": "bubbles-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-d773e2f1-c0dc-4c39-8b12-ce0bcec7872d.png",
+    "resource": "assets/art/effects/bubbles-hd.png"
+  },
+  {
+    "name": "heroes-front-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-ce9e1311-70cc-4cd1-bf2b-c3cceef4ca9d.png",
+    "resource": "assets/art/characters/views/heroes-front-hd.png"
+  },
+  {
+    "name": "heroes-back-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-92b0cc19-a3b9-47c3-b2e9-bae000900d64.png",
+    "resource": "assets/art/characters/views/heroes-back-hd.png"
+  },
+  {
+    "name": "heroes-left-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-e9eaf0d7-178d-4c98-ac1e-28b523425a10.png",
+    "resource": "assets/art/characters/views/heroes-left-hd.png"
+  },
+  {
+    "name": "heroes-right-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-a0ee31a7-4df6-4ff0-ac11-38b1ed0879ee.png",
+    "resource": "assets/art/characters/views/heroes-right-hd.png"
+  },
+  {
+    "name": "mounts-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-fc988765-b194-4429-971e-e58bd572c04e.png",
+    "resource": "assets/art/mounts/mounts-hd.png"
+  },
+  {
+    "name": "impacts-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-0fba0635-186d-4d98-a275-d30e9f537b3b.png",
+    "resource": "assets/art/effects/impacts-hd.png"
+  },
+  {
+    "name": "fauna-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-8d073cae-1c4f-4529-acdc-83d8b2f884a7.png",
+    "resource": "assets/art/maps/decorations/fauna-hd.png"
+  },
+  {
+    "name": "theme-harbor-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-fd5e4f21-236e-4919-8a1c-954d0f981573.png",
+    "resource": "assets/art/maps/decorations/theme-harbor-hd.png"
+  },
+  {
+    "name": "landscape-harbor-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-b0ee7a27-dc13-4997-beab-e0d8ab3fb4b4.png",
+    "resource": "assets/art/maps/backgrounds/landscape-harbor-hd.png"
+  },
+  {
+    "name": "theme-forest-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-b127f9f1-9ce1-4bd7-83d2-658cc83ee2fc.png",
+    "resource": "assets/art/maps/decorations/theme-forest-hd.png"
+  },
+  {
+    "name": "landscape-forest-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-7f44311b-17a4-4b0b-9111-31a447aec4d1.png",
+    "resource": "assets/art/maps/backgrounds/landscape-forest-hd.png"
+  },
+  {
+    "name": "theme-frost-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-aeeaa04e-09d2-43e2-a417-e98492ed284f.png",
+    "resource": "assets/art/maps/decorations/theme-frost-hd.png"
+  },
+  {
+    "name": "landscape-frost-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-25755428-c42d-42d6-a199-f1d9370b1bd0.png",
+    "resource": "assets/art/maps/backgrounds/landscape-frost-hd.png"
+  },
+  {
+    "name": "theme-desert-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-0d42cf0c-96aa-4f94-b9c2-1f9f2c16d1c5.png",
+    "resource": "assets/art/maps/decorations/theme-desert-hd.png"
+  },
+  {
+    "name": "landscape-desert-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-4bf27055-c3f8-48d1-a670-06efef2e4f6a.png",
+    "resource": "assets/art/maps/backgrounds/landscape-desert-hd.png"
+  },
+  {
+    "name": "theme-volcano-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-7ee9f1ff-80ec-4770-82d0-6942575b3008.png",
+    "resource": "assets/art/maps/decorations/theme-volcano-hd.png"
+  },
+  {
+    "name": "landscape-volcano-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-aae68d3b-4173-4395-b06a-5b80394fecdf.png",
+    "resource": "assets/art/maps/backgrounds/landscape-volcano-hd.png"
+  },
+  {
+    "name": "theme-factory-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-06272fdd-9940-4961-9ba8-d42938bb75bd.png",
+    "resource": "assets/art/maps/decorations/theme-factory-hd.png"
+  },
+  {
+    "name": "landscape-factory-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-98414a6f-21cd-495b-b222-5228b041e0c5.png",
+    "resource": "assets/art/maps/backgrounds/landscape-factory-hd.png"
+  },
+  {
+    "name": "theme-candy-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-0944d565-a794-4036-8aed-91f91f64ee2f.png",
+    "resource": "assets/art/maps/decorations/theme-candy-hd.png"
+  },
+  {
+    "name": "landscape-candy-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-01261788-2694-4cf4-8753-3833c47b0127.png",
+    "resource": "assets/art/maps/backgrounds/landscape-candy-hd.png"
+  },
+  {
+    "name": "theme-cosmos-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-c9fcc849-47ff-4151-ba2b-dfa6db28726c.png",
+    "resource": "assets/art/maps/decorations/theme-cosmos-hd.png"
+  },
+  {
+    "name": "landscape-cosmos-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-eabcdb71-1e6a-4d85-8b03-93b1c15146d4.png",
+    "resource": "assets/art/maps/backgrounds/landscape-cosmos-hd.png"
+  },
+  {
+    "name": "theme-swamp-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-af780763-9e0a-4859-a88e-dfc91f3a5b04.png",
+    "resource": "assets/art/maps/decorations/theme-swamp-hd.png"
+  },
+  {
+    "name": "landscape-swamp-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-839499b8-6bbf-493b-a99c-c32076d99e2b.png",
+    "resource": "assets/art/maps/backgrounds/landscape-swamp-hd.png"
+  },
+  {
+    "name": "theme-ruins-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-3002a812-6090-4730-b62f-8a5b3369cde7.png",
+    "resource": "assets/art/maps/decorations/theme-ruins-hd.png"
+  },
+  {
+    "name": "landscape-ruins-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-dcbc8a35-be0d-402c-9dd9-5504fd03b6a5.png",
+    "resource": "assets/art/maps/backgrounds/landscape-ruins-hd.png"
+  },
+  {
+    "name": "theme-reef-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-0b9cde6c-09e4-4bed-8f59-484ca3ff5ffe.png",
+    "resource": "assets/art/maps/decorations/theme-reef-hd.png"
+  },
+  {
+    "name": "landscape-reef-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-ba4c2b6e-1ca6-4d5e-b7e4-c2d73601fa66.png",
+    "resource": "assets/art/maps/backgrounds/landscape-reef-hd.png"
+  },
+  {
+    "name": "theme-sky-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-f0e1d2ae-5910-4dc6-a1f9-51b908b2dbe8.png",
+    "resource": "assets/art/maps/decorations/theme-sky-hd.png"
+  },
+  {
+    "name": "landscape-sky-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-b347e2bd-916e-4345-b13a-525d00f0ba59.png",
+    "resource": "assets/art/maps/backgrounds/landscape-sky-hd.png"
+  },
+  {
+    "name": "theme-citadel-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-1ae6b91c-ddfa-4ac6-b8f1-e0ca2454a33e.png",
+    "resource": "assets/art/maps/decorations/theme-citadel-hd.png"
+  },
+  {
+    "name": "landscape-citadel-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-fffc3a79-263d-4cf6-98a8-63b1086aefdf.png",
+    "resource": "assets/art/maps/backgrounds/landscape-citadel-hd.png"
+  },
+  {
+    "name": "theme-cave-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-2e28530e-e198-4e94-a9ca-a3718a57f61a.png",
+    "resource": "assets/art/maps/decorations/theme-cave-hd.png"
+  },
+  {
+    "name": "landscape-cave-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-237a0056-e2dd-4b73-8902-207bc6fb4c26.png",
+    "resource": "assets/art/maps/backgrounds/landscape-cave-hd.png"
+  },
+  {
+    "name": "walk-sailor-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-cc8c2612-53b0-4a0d-bd31-f76471331f58.png",
+    "resource": "assets/art/characters/walk/walk-sailor-hd.png"
+  },
+  {
+    "name": "walk-bunny-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-eecb9103-d1ff-45c8-921e-e7a030e37bb4.png",
+    "resource": "assets/art/characters/walk/walk-bunny-hd.png"
+  },
+  {
+    "name": "walk-frog-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-58685085-3586-43ce-bb3c-baf27afecccd.png",
+    "resource": "assets/art/characters/walk/walk-frog-hd.png"
+  },
+  {
+    "name": "walk-fox-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-e0fe66af-4dd3-4a18-9aca-f0df07a6637e.png",
+    "resource": "assets/art/characters/walk/walk-fox-hd.png"
+  },
+  {
+    "name": "walk-bear-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-f91151db-0875-43ed-b77b-0ee795597c98.png",
+    "resource": "assets/art/characters/walk/walk-bear-hd.png"
+  },
+  {
+    "name": "walk-witch-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-1009f96c-dca3-42c9-9a97-52871777d0f8.png",
+    "resource": "assets/art/characters/walk/walk-witch-hd.png"
+  },
+  {
+    "name": "walk-robot-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-e98fdbe7-92d2-4904-bc4c-444192b0d3c2.png",
+    "resource": "assets/art/characters/walk/walk-robot-hd.png"
+  },
+  {
+    "name": "walk-flame-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-4485b14b-93a2-4e80-b327-df573d7e73cb.png",
+    "resource": "assets/art/characters/walk/walk-flame-hd.png"
+  },
+  {
+    "name": "hero-actions-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-01bbeaad-662a-42e4-a8a7-3de3e2be7e1c.png",
+    "resource": "assets/art/characters/actions/hero-actions-hd.png"
+  },
+  {
+    "name": "remote-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-7eaca609-d217-4010-80d3-66dc75526e39.png",
+    "resource": "assets/art/items/remote-hd.png"
+  },
+  {
+    "name": "playfield-harbor-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-c58a439f-064f-491d-831e-12386a9d6506.png",
+    "resource": "assets/art/maps/floors/playfield-harbor-hd.png"
+  },
+  {
+    "name": "playfield-forest-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-74d11b32-682c-4e47-927e-ac9c21accb6c.png",
+    "resource": "assets/art/maps/floors/playfield-forest-hd.png"
+  },
+  {
+    "name": "playfield-frost-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-aae7c10d-4b5b-4577-b254-ff3999101359.png",
+    "resource": "assets/art/maps/floors/playfield-frost-hd.png"
+  },
+  {
+    "name": "playfield-desert-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-f9e3ac32-34d5-4bf8-bfa1-536cb8aaa240.png",
+    "resource": "assets/art/maps/floors/playfield-desert-hd.png"
+  },
+  {
+    "name": "playfield-volcano-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-285bf5ba-98aa-430e-9b4e-d9def956f162.png",
+    "resource": "assets/art/maps/floors/playfield-volcano-hd.png"
+  },
+  {
+    "name": "playfield-factory-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-2fa6266d-2c4d-4f73-975f-0af82a54336b.png",
+    "resource": "assets/art/maps/floors/playfield-factory-hd.png"
+  },
+  {
+    "name": "playfield-candy-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-218257f2-16c5-41a4-8869-a61dffcbb1cf.png",
+    "resource": "assets/art/maps/floors/playfield-candy-hd.png"
+  },
+  {
+    "name": "playfield-cosmos-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-3d51763a-3c25-4512-8a65-c9e5ec0db50b.png",
+    "resource": "assets/art/maps/floors/playfield-cosmos-hd.png"
+  },
+  {
+    "name": "playfield-swamp-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-6bf945f5-7d33-4fdc-a185-c4b1cb252aef.png",
+    "resource": "assets/art/maps/floors/playfield-swamp-hd.png"
+  },
+  {
+    "name": "playfield-ruins-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-0a8a5642-a3f6-49d4-a5b6-67e2429bcf13.png",
+    "resource": "assets/art/maps/floors/playfield-ruins-hd.png"
+  },
+  {
+    "name": "playfield-reef-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-0deee688-3aa3-4e2e-a573-ac9116d571ae.png",
+    "resource": "assets/art/maps/floors/playfield-reef-hd.png"
+  },
+  {
+    "name": "playfield-sky-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-564fe567-9afd-4486-a42b-b99cbba7c067.png",
+    "resource": "assets/art/maps/floors/playfield-sky-hd.png"
+  },
+  {
+    "name": "playfield-citadel-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-87b08481-2898-4af8-861e-1743e1067d0f.png",
+    "resource": "assets/art/maps/floors/playfield-citadel-hd.png"
+  },
+  {
+    "name": "playfield-cave-hd",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-36bac80c-209f-4b44-993e-809f07cb446d.png",
+    "resource": "assets/art/maps/floors/playfield-cave-hd.png"
+  },
+  {
+    "name": "hero-trapped-v5",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-341e7cec-a8db-401f-b0fd-0d33785a4926.png",
+    "resource": "assets/art/characters/actions/hero-trapped-v5.png"
+  },
+  {
+    "name": "hero-death-v5",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-4416d004-5801-4f79-938d-870d4b09abf4.png",
+    "resource": "assets/art/characters/actions/hero-death-v5.png"
+  },
+  {
+    "name": "bubble-break-v5",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-740fa116-f673-481f-a347-b12764eafa75.png",
+    "resource": "assets/art/effects/bubble-break-v5.png"
+  },
+  {
+    "name": "mechanisms-v5",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-60e6b103-2bff-4ddc-b8b4-68a5e262d382.png",
+    "retired": true
+  },
+  {
+    "name": "hero-death-v5-clean",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-c020217a-4a94-43e3-9a77-6072cd26d8ac.png",
+    "resource": "assets/art/characters/actions/hero-death-v5.png"
+  },
+  {
+    "name": "monster-00-anim.png",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-2fcd72dd-1c4d-4b2c-9508-97d437c1ffac.png",
+    "resource": "assets/art/monsters/animations/monster-00-anim.png"
+  },
+  {
+    "name": "monster-01-anim.png",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-84d8a763-d481-46ec-b615-39c805a9e290.png",
+    "resource": "assets/art/monsters/animations/monster-01-anim.png"
+  },
+  {
+    "name": "monster-02-anim.png",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-3f913de0-fb04-4c18-af48-a24c5cdc5647.png",
+    "resource": "assets/art/monsters/animations/monster-02-anim.png"
+  },
+  {
+    "name": "monster-03-anim.png",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-db0ea7e7-3417-4a39-9932-46ee64266c83.png",
+    "resource": "assets/art/monsters/animations/monster-03-anim.png"
+  },
+  {
+    "name": "monster-04-anim.png",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-43de57ae-025f-44a5-84c8-014738ddd99e.png",
+    "resource": "assets/art/monsters/animations/monster-04-anim.png"
+  },
+  {
+    "name": "monster-05-anim.png",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-2bfa00b2-08ff-40c5-934d-e4155e6cfb0e.png",
+    "resource": "assets/art/monsters/animations/monster-05-anim.png"
+  },
+  {
+    "name": "monster-06-anim.png",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-a140ea00-7773-43f7-8623-b16eedefad88.png",
+    "resource": "assets/art/monsters/animations/monster-06-anim.png"
+  },
+  {
+    "name": "monster-07-anim.png",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-6f9247e5-b36e-4b93-8f47-61b9196f147a.png",
+    "resource": "assets/art/monsters/animations/monster-07-anim.png"
+  },
+  {
+    "name": "monster-08-anim.png",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-b27c92a1-6521-42ec-b49e-30df0537ca80.png",
+    "resource": "assets/art/monsters/animations/monster-08-anim.png"
+  },
+  {
+    "name": "monster-09-anim.png",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-83b49c12-cdf3-4a63-8894-41e2e9ac53e8.png",
+    "resource": "assets/art/monsters/animations/monster-09-anim.png"
+  },
+  {
+    "name": "monster-10-anim.png",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-70e67858-853a-4d90-8ae5-a2352e047105.png",
+    "resource": "assets/art/monsters/animations/monster-10-anim.png"
+  },
+  {
+    "name": "heroes-front-hd-clean-4x2",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-3e82f63a-bc41-459c-9cc7-68cf9364c00e.png",
+    "resource": "assets/art/characters/views/heroes-front-hd.png"
+  },
+  {
+    "name": "blocks-depth-v463",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-8e1125be-15b6-46e8-a84a-23f7478fc3db.png",
+    "tool": "built-in imagegen",
+    "resource": "assets/art/maps/blocks/blocks-depth-v463.png"
+  },
+  {
+    "name": "pressure-core-v464",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-773d8dc2-0bb7-434d-8081-b4f0ce2324b8.png",
+    "tool": "built-in imagegen",
+    "resource": "assets/art/items/pressure-core-v464.png"
+  },
+  {
+    "name": "mechanisms-v472",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-d879af78-5600-440d-87d7-8cd709686efd.png",
+    "resource": "assets/art/maps/mechanisms/mechanisms-v472.png"
+  },
+  {
+    "name": "water-vines-v473",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-2e56b5f3-4986-4f9e-abeb-3c51c85c4564.png",
+    "resource": "assets/art/effects/water-vines-v473.png"
+  },
+  {
+    "name": "monster-skills-v474",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-5e323653-8f22-4c35-8012-82aa8f76b88c.png",
+    "resource": "assets/art/effects/monster-skills-v474.png"
+  }
+]

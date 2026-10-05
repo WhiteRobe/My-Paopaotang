@@ -21,7 +21,7 @@ func setup():
 		"bridges":
 			for x in [g.W/2-4,g.W/2-3,g.W/2-2,g.W/2+2,g.W/2+3,g.W/2+4]:
 				var c=Vector2i(x,g.H/2);cells.append(c);g.grid[c.y][c.x]=0;g.terrain[c]={"type":"bridge"}
-		"turrets":cells=[Vector2i(0,4),Vector2i(g.W-1,10),Vector2i(6,0),Vector2i(14,g.H-1)]
+		"turrets":cells=[Vector2i(0,g.H/2-5),Vector2i(g.W-1,g.H/2+5),Vector2i(g.W/2-7,0),Vector2i(g.W/2+7,g.H-1)]
 		"blackout":
 			for c in points:g.clear_patch(c);g.terrain[c]={"type":"lamp"};cells.append(c)
 func update(dt):
@@ -99,7 +99,7 @@ func draw_turret(c):
 	var pos=g.center(c)
 	var rotation=PI/2 if c.x==0 else -PI/2 if c.x==g.W-1 else PI if c.y==0 else 0.0
 	g.canvas.draw_set_transform(pos,rotation)
-	g.hd.sprite("mechanisms-v472.png",8,Vector2(-8,-8),Vector2(16,16))
+	g.hd.sprite("maps/mechanisms/mechanisms-v472.png",8,Vector2(-8,-8),Vector2(16,16))
 	g.canvas.draw_set_transform(Vector2(sin(g.elapsed*83),cos(g.elapsed*71))*g.shake)
 
 func draw_overlay():

@@ -29,16 +29,18 @@ func setup():
 		for x in range(1,g.W-1):
 			var c=Vector2i(x,y)
 			if g.grid[y][x]!=2:continue
-			var seed_value=(x*13+y*37+g.arena*7)%10
+			var mirrored=c if y<g.H/2 or (y==g.H/2 and x<=g.W/2) else Vector2i(g.W-1-x,g.H-1-y)
+			var seed_value=(mirrored.x*13+mirrored.y*37+g.arena*7)%10
 			var kind="push" if seed_value<2 else ("armor" if seed_value<4 else "normal")
 			if g.gold_boxes.has(c) or g.vine_cells.has(c):kind="normal"
 			add(c,kind)
-	# Keep the central crossing and all four spawn exits open.
-	var vault_pos=Vector2i(7,3) if g.arena%2==0 else Vector2i(12,9)
-	if g.mode==3 and (g.adventure_stage%4)==0:vault_pos=Vector2i(16,9)
-	for b in boxes:
-		if footprint(b).any(func(c):return Rect2i(vault_pos,Vector2i(2,2)).has_point(c)):b.dead=true
-	add(vault_pos,"vault",Vector2i(2,2))
+	# Paired vaults keep opposing battle spawns equally far from the reward.
+	var vault_positions=[Vector2i(g.W/2-5,g.H/2-3),Vector2i(g.W/2+4,g.H/2+2)] if g.mode!=3 else [Vector2i(16,9) if (g.adventure_stage%4)==0 else Vector2i(7,3)]
+	for vault_pos in vault_positions:
+		for b in boxes:
+			if footprint(b).any(func(c):return Rect2i(vault_pos,Vector2i(2,2)).has_point(c)):b.dead=true
+		add(vault_pos,"vault",Vector2i(2,2))
+
 	rebuild()
 func prune():
 	for b in boxes:
@@ -69,7 +71,7 @@ func damage(c,owner=-1,hit_boxes=null):
 		g.grid[c.y][c.x]=0
 		if owner>=0 and owner<g.players.size() and g.players[owner].get("control",owner)==0:g.stat("crates")
 		if g.gold_boxes.has(c):g.drops[c]=19;g.gold_boxes.erase(c)
-		elif g.rng.randf()<.76:g.drops[c]=g.random_drop()
+		elif g.rng.randf()<g.loot_chance(.76):g.drops[c]=g.random_drop()
 		return
 	if hit_boxes!=null:
 		if hit_boxes.has(b.serial):return
@@ -91,7 +93,7 @@ func damage(c,owner=-1,hit_boxes=null):
 			if not g.inside(tile) or g.grid[tile.y][tile.x]!=0 or g.bomb_at(tile)!=null:continue
 			g.drops[tile]=rewards[index];index+=1
 		g.announce("宝库开启：坐骑、成长、属性核心！");g.world_fx.impact(g.center(b.cell)+Vector2(9,9),5,60);g.shake=2
-	elif not g.drops.has(c) and g.rng.randf()<(.95 if b.kind=="armor" else .76):g.drops[c]=g.random_drop()
+	elif not g.drops.has(c) and g.rng.randf()<g.loot_chance(.95 if b.kind=="armor" else .76):g.drops[c]=g.random_drop()
 	rebuild()
 func draw_box(b):
 	var theme=g.Catalog.MAPS[g.arena].theme

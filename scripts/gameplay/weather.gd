@@ -36,11 +36,17 @@ func update(dt):
 	var phase=fmod(g.round_time,90)
 	nightness=0.0 if phase<35 else (clampf((phase-35)/10,0,1) if phase<75 else clampf((90-phase)/15,0,1))
 	if not g.Catalog.MAPS[g.arena].get("daynight",false):nightness=0
+	if g.mode in [1,2]:
+		if g.battle_options.daylight==1:nightness=0
+		elif g.battle_options.daylight==2:nightness=0.0 if phase<35 else (clampf((phase-35)/10,0,1) if phase<75 else clampf((90-phase)/15,0,1))
+		elif g.battle_options.daylight==3:nightness=1
 	if g.Catalog.MAPS[g.arena].get("night",false):nightness=1
 	var fog_phase=fmod(g.round_time+(g.arena%7)*2,60)
-	wind=g.Catalog.MAPS[g.arena].get("fog",false) and fog_phase>=50
+	var fog_enabled=g.Catalog.MAPS[g.arena].get("fog",false)
+	if g.mode in [1,2] and g.battle_options.fog>0:fog_enabled=g.battle_options.fog==2
+	wind=fog_enabled and fog_phase>=50
 	fog_strength=clampf(minf((fog_phase-18)/4,(50-fog_phase)/5),0,1)
-	if not g.Catalog.MAPS[g.arena].get("fog",false):fog_strength=0
+	if not fog_enabled:fog_strength=0
 	var new_epoch=int((g.round_time+(g.arena%7)*2)/60)
 	if new_epoch!=epoch:
 		epoch=new_epoch;fog_patches.clear()
@@ -67,5 +73,6 @@ func label():
 func draw_torch(c):
 	if g.grid[c.y][c.x]==3:return
 	var pos=g.center(c)
-	g.item_icon(pos+Vector2(-11.5,-17),27,23)
-	g.canvas.draw_circle(pos+Vector2(0,-13),1.1+sin(g.elapsed*11+c.x)*.3,Color("fff1b5"))
+	g.canvas.draw_circle(pos+Vector2(0,5),4,Color(0,0,0,.20))
+	g.hd.sprite("maps/decorations/site-details-v478.png",13,pos+Vector2(-8,-17),Vector2(16,23))
+	g.canvas.draw_circle(pos+Vector2(0,-10),.7+sin(g.elapsed*11+c.x)*.15,Color("fff1b5"))

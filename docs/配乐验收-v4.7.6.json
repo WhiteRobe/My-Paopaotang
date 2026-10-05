@@ -1,0 +1,174 @@
+{
+  "tracks": [
+    {
+      "id": "harbor-alt",
+      "seconds": 177.778,
+      "decoded_peak": 0.6178,
+      "rms": 0.145,
+      "seam": 0.01494,
+      "issues": []
+    },
+    {
+      "id": "forest-alt",
+      "seconds": 183.53,
+      "decoded_peak": 0.6841,
+      "rms": 0.145,
+      "seam": 0.00032,
+      "issues": []
+    },
+    {
+      "id": "frost-alt",
+      "seconds": 180.0,
+      "decoded_peak": 0.7107,
+      "rms": 0.145,
+      "seam": 0.01902,
+      "issues": []
+    },
+    {
+      "id": "desert-alt",
+      "seconds": 181.134,
+      "decoded_peak": 0.7395,
+      "rms": 0.145,
+      "seam": 0.01341,
+      "issues": []
+    },
+    {
+      "id": "volcano-alt",
+      "seconds": 167.62,
+      "decoded_peak": 0.6281,
+      "rms": 0.145,
+      "seam": 0.00737,
+      "issues": []
+    },
+    {
+      "id": "factory-alt",
+      "seconds": 170.324,
+      "decoded_peak": 0.6115,
+      "rms": 0.145,
+      "seam": 0.01843,
+      "issues": []
+    },
+    {
+      "id": "candy-alt",
+      "seconds": 162.712,
+      "decoded_peak": 0.7859,
+      "rms": 0.145,
+      "seam": 0.00668,
+      "issues": []
+    },
+    {
+      "id": "cosmos-alt",
+      "seconds": 204.256,
+      "decoded_peak": 0.7723,
+      "rms": 0.145,
+      "seam": 0.01123,
+      "issues": []
+    },
+    {
+      "id": "swamp-alt",
+      "seconds": 195.92,
+      "decoded_peak": 0.643,
+      "rms": 0.145,
+      "seam": 0.01598,
+      "issues": []
+    },
+    {
+      "id": "ruins-alt",
+      "seconds": 208.696,
+      "decoded_peak": 0.7,
+      "rms": 0.145,
+      "seam": 0.01542,
+      "issues": []
+    },
+    {
+      "id": "reef-alt",
+      "seconds": 218.182,
+      "decoded_peak": 0.7183,
+      "rms": 0.145,
+      "seam": 0.00199,
+      "issues": []
+    },
+    {
+      "id": "sky-alt",
+      "seconds": 165.518,
+      "decoded_peak": 0.7766,
+      "rms": 0.1408,
+      "seam": 0.00715,
+      "issues": []
+    },
+    {
+      "id": "citadel-alt",
+      "seconds": 176.0,
+      "decoded_peak": 0.6051,
+      "rms": 0.145,
+      "seam": 0.00086,
+      "issues": []
+    },
+    {
+      "id": "cave-alt",
+      "seconds": 223.256,
+      "decoded_peak": 0.7343,
+      "rms": 0.145,
+      "seam": 0.0095,
+      "issues": []
+    },
+    {
+      "id": "menu",
+      "seconds": 200.0,
+      "decoded_peak": 0.6733,
+      "rms": 0.145,
+      "seam": 0.00252,
+      "issues": []
+    },
+    {
+      "id": "lobby",
+      "seconds": 171.43,
+      "decoded_peak": 0.7129,
+      "rms": 0.145,
+      "seam": 0.01135,
+      "issues": []
+    },
+    {
+      "id": "boss-swamp",
+      "seconds": 180.0,
+      "decoded_peak": 0.7068,
+      "rms": 0.145,
+      "seam": 0.00485,
+      "issues": []
+    },
+    {
+      "id": "boss-ruins",
+      "seconds": 174.546,
+      "decoded_peak": 0.7382,
+      "rms": 0.145,
+      "seam": 0.018,
+      "issues": []
+    },
+    {
+      "id": "boss-reef",
+      "seconds": 185.808,
+      "decoded_peak": 0.7801,
+      "rms": 0.1427,
+      "seam": 0.00924,
+      "issues": []
+    },
+    {
+      "id": "boss-sky",
+      "seconds": 164.572,
+      "decoded_peak": 0.6929,
+      "rms": 0.145,
+      "seam": 0.00619,
+      "issues": []
+    },
+    {
+      "id": "boss-citadel",
+      "seconds": 160.0,
+      "decoded_peak": 0.7415,
+      "rms": 0.145,
+      "seam": 0.00213,
+      "issues": []
+    }
+  ],
+  "total_minutes": 64.19,
+  "issues": []
+}

@@ -18,31 +18,98 @@ func update(dt):
 	links=links.filter(func(link):return link.life>0)
 	for event in events:event.life-=dt
 	events=events.filter(func(event):return event.life>0)
+func design_board(pve=false):
+	# Boss courts use perimeter cover, leaving the central dodge lane clear.
+	if pve and g.adventure.stage.mission=="boss":
+		for c in [Vector2i(6,7),Vector2i(7,7),Vector2i(14,8),Vector2i(14,9),Vector2i(10,11),Vector2i(11,11)]:
+			if not design_reserved(c,true):g.grid[c.y][c.x]=2
+	# Add paired cover islands to cleared rooms; task routes and entrances stay open.
+	for y in range(4,g.H-4,5):
+		for x in range(4,g.W-4,5):
+			var clear=true
+			for dy in range(-2,3):
+				for dx in range(-2,3):
+					var c=Vector2i(x+dx,y+dy)
+					if not g.inside(c) or g.grid[c.y][c.x]!=0:clear=false
+			if not clear:continue
+			for offset in [Vector2i(-1,-1),Vector2i(0,-1),Vector2i(1,1)]:
+				var c=Vector2i(x,y)+offset
+				if design_reserved(c,pve):continue
+				if g.mode in [1,2] and g.battle_options.density==1 and offset!=Vector2i(-1,-1):continue
+				if not pve:
+					var mirror=Vector2i(g.W-1-c.x,g.H-1-c.y)
+					if design_reserved(mirror,false):continue
+					g.grid[mirror.y][mirror.x]=2
+				g.grid[c.y][c.x]=2
+func design_reserved(c,pve):
+	if not g.inside(c) or g.grid[c.y][c.x]!=0 or g.terrain.has(c):return true
+	if c.x==g.W/2 or c.y==g.H/2:return true
+	for spawn in g.SPAWNS:
+		if g.manhattan(c,spawn)<=3:return true
+	if pve:
+		if g.drops.has(c):return true
+		for obj in g.adventure.objects+g.adventure.bonus_objects:
+			if c.x==obj.cell.x or g.manhattan(c,obj.cell)<=2:return true
+		for enemy in g.adventure.enemies:
+			if g.manhattan(c,enemy.cell)<(4 if enemy.boss else 2):return true
+		if g.manhattan(c,g.adventure.checkpoint)<=3:return true
+	return false
 func draw_ground():
-	pass
+	var theme=g.Catalog.MAPS[g.arena].theme
+	var paving=[1,0,0,3,2,2,3,3,0,3,0,3,3,0][theme]
+	var feature=[4,6,5,5,5,4,7,5,6,5,7,4,5,5][theme]
+	# Broad inlaid patches mark courtyards and routes without competing with actors.
+	for y in range(3,g.H-2,7):
+		for x in range(3,g.W-2,7):
+			var anchor=Vector2i(x,y)
+			if absf(x-g.camera.x)>g.VIEW_SIZE.x+3 or absf(y-g.camera.y)>g.VIEW_SIZE.y+3:continue
+			for dy in range(-1,2):
+				for dx in range(-1,2):
+					var c=anchor+Vector2i(dx,dy)
+					if not g.inside(c) or g.grid[c.y][c.x] in [1,3] or g.terrain.has(c):continue
+					g.hd.sprite("maps/decorations/site-details-v478.png",paving,g.center(c)-Vector2.ONE*8,Vector2.ONE*16,Color(1,1,1,.25),false)
+			if g.inside(anchor) and g.grid[y][x]==0 and not g.terrain.has(anchor):
+				g.hd.sprite("maps/decorations/site-details-v478.png",feature,g.center(anchor)-Vector2.ONE*7,Vector2.ONE*14,Color(1,1,1,.36))
 func draw_visitors(theme):
-	# Each habitat has a distinct animated visitor, separate from gameplay hazards.
-	for n in range(1):
-		var pos=g.ORIGIN+Vector2(fposmod(g.elapsed*(22 if theme==13 else 13)+n*117,g.W*g.TILE),28+n*43+sin(g.elapsed*1.7+n)*13)
-		var flap=sin(g.elapsed*(11 if theme==13 else 6)+n)
-		if theme in [13,0,11,12,1,8,10]:
-			var kind=0 if theme==13 else 1 if theme in [0,12] else 4 if theme==11 else 5 if theme==1 else 2 if theme==8 else 3
-			var size=Vector2(20,12)*(1+flap*.035)
-			g.hd.sprite("fauna-hd.png",kind,pos-size/2,size,Color(1,1,1,.66))
-		elif theme==5:
-			var vent=g.center(Vector2i(2+n*8,1));var age=fmod(g.elapsed+n,.9)
-			g.canvas.draw_arc(vent+Vector2(sin(age*5)*3,-age*16),2+age*3,PI,TAU,12,Color(.8,.88,.88,(1-age)*.35),1)
-		elif theme==6:g.canvas.draw_arc(pos,3+sin(g.elapsed+n),0,TAU,16,Color(.95,.77,.9,.3),1)
-		elif theme==7 and fmod(g.elapsed+n*5,18)<1.5:
-			g.canvas.draw_line(pos,pos+Vector2(-13,5),Color(.86,.84,1,.4),1);g.canvas.draw_circle(pos,1,Color("ebddff"))
-		elif theme==9:
-			g.canvas.draw_arc(g.center(Vector2i(3+n*7,2))+Vector2(sin(g.elapsed+n)*3,-fmod(g.elapsed*4+n*7,18)),3,PI,TAU,12,Color(.8,.78,.85,.25),1)
+	var origin=g.ORIGIN+g.camera*g.TILE
+	var width=g.VIEW_SIZE.x*g.TILE
+	var height=g.VIEW_SIZE.y*g.TILE
+	if theme in [13,0,11,12,1,8,10]:
+		var cycle=18.0 if theme==13 else 26.0
+		var t=fposmod(g.elapsed+g.arena*.37,cycle)
+		if t<10:
+			var pos=origin+Vector2(-22+(width+44)*t/10,24+sin(t*.9)*8)
+			if theme==13:
+				g.hd.ambient_frame("maps/decorations/bat-flight-v478.png",posmod(int(g.elapsed*20),16),pos,Vector2(22,14),Color(1,1,1,.82))
+			else:
+				var row=0 if theme in [0,11,12] else 1 if theme==1 else 2 if theme==8 else 3
+				g.hd.ambient_frame("maps/decorations/habitat-flight-v478.png",row*8+posmod(int(g.elapsed*[12,10,18,10][row]),8),pos,Vector2(20,12),Color(1,1,1,.65))
+	for n in range(3):
+		var pos=origin+Vector2(35+n*width*.32,20+height*.22*(n+1))
+		var age=fposmod(g.elapsed*.4+n*.37,1)
+		if theme in [5,9,13]:
+			# Thin rising steam, ancient dust, or falling cave droplets.
+			if theme==13:
+				var fall=fposmod(g.elapsed*.65+n*.41,1)
+				var at=pos+Vector2(0,fall*18)
+				g.canvas.draw_line(at-Vector2(0,2),at,Color(.5,.76,.82,.35*(1-fall)),1)
+				if fall>.85:g.canvas.draw_arc(pos+Vector2(0,18),1+(fall-.85)*12,0,TAU,16,Color(.5,.76,.82,(1-fall)*2),.5)
+			else:
+				for k in range(3):
+					var at=pos+Vector2(sin(age*4+n+k)*3,-age*20-k*3)
+					g.canvas.draw_arc(at,1+age*3,PI*.2,PI*.8,10,Color(.76,.85,.83,(1-age)*.18),.6)
+		elif theme in [6,10]:
+			g.canvas.draw_arc(pos+Vector2(sin(age*5)*2,-age*26),1+age*3,0,TAU,18,Color(.85,.94,.97,(1-age)*.22),.6)
+		elif theme==7 and fposmod(g.elapsed+n*6,23)<1:
+			var at=pos+Vector2(age*70,-age*20)
+			g.canvas.draw_line(at-Vector2(12,-4),at,Color(.82,.80,1,.35),1)
+			g.canvas.draw_circle(at,.7,Color(.94,.87,1,.7))
 func draw_air():
 	var theme=g.Catalog.MAPS[g.arena].theme
 	draw_visitors(theme)
 	var color=[Color("c4efdf"),Color("c6dba0"),Color("e5f7ff"),Color("eed0aa"),Color("ffba83"),Color("bddbdd"),Color("ffe0ed"),Color("dfd6ff"),Color("d3edaa"),Color("decfb7"),Color("b9eeeb"),Color("e6f3e9"),Color("d1b6ef"),Color("a4c7d1")][theme]
 	for n in range(8):
-		var pos=g.ORIGIN+Vector2(fposmod(n*53+g.elapsed*(3 if theme in [7,8,12] else 9),g.W*g.TILE),fposmod(n*29+g.elapsed*(8 if theme==2 else -4),g.H*g.TILE))
+		var pos=g.ORIGIN+Vector2(fposmod(n*53+g.elapsed*(3 if theme in [7,8,12] else 9),g.VIEW_SIZE.x*g.TILE),fposmod(n*29+g.elapsed*(8 if theme==2 else -4),g.VIEW_SIZE.y*g.TILE))+g.camera*g.TILE
 		var alpha=.12+.12*sin(g.elapsed*2+n)
 		if theme in [0,10]:
 			g.canvas.draw_arc(pos,1.5+(n%3)*.5,0,TAU,10,Color(color,alpha),1)
@@ -50,7 +117,14 @@ func draw_air():
 			g.rect(pos,Vector2(2,1),Color(color,alpha));g.rect(pos+Vector2(1,-1),Vector2(1,3),Color(color,alpha))
 		elif theme in [7,12]:
 			g.canvas.draw_line(pos-Vector2(2,0),pos+Vector2(2,0),Color(color,alpha),1);g.canvas.draw_line(pos-Vector2(0,2),pos+Vector2(0,2),Color(color,alpha),1)
-		else:g.rect(pos,Vector2(1 if theme in [3,9] else 2,1),Color(color,alpha))
+		elif theme==2:
+			g.canvas.draw_line(pos-Vector2(1,2),pos+Vector2(1,1),Color(color,alpha+.1),.7)
+		elif theme==3:
+			g.canvas.draw_arc(pos,3+n%3,PI*.08,PI*.35,12,Color(color,alpha*.65),.7)
+		elif theme==4:
+			g.canvas.draw_circle(pos,.65,Color(color,alpha+.12))
+			g.canvas.draw_line(pos,pos+Vector2(-1,3),Color(color,alpha*.5),.7)
+		else:g.canvas.draw_circle(pos,.5,Color(color,alpha))
 	for foot in footsteps:
 		var age=1-foot.life/.35
 		for side in [-1,1]:
@@ -61,4 +135,5 @@ func draw_air():
 		g.canvas.draw_line(link.from,link.to,Color(1,1,1,link.life*3),1)
 	for event in events:
 		var frame=clampi(int((.48-event.life)/.12),0,3)
-		g.hd.sprite("impacts-hd.png",frame*6+event.kind,event.pos-Vector2.ONE*event.size/2.0,Vector2.ONE*event.size)
+		if event.kind==0:g.hd.sprite("effects/water-vines-v473.png",frame*4+2,event.pos-Vector2.ONE*event.size/2.0,Vector2.ONE*event.size)
+		else:g.hd.sprite("effects/impacts-hd.png",frame*6+event.kind,event.pos-Vector2.ONE*event.size/2.0,Vector2.ONE*event.size)

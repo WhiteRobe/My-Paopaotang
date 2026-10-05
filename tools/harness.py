@@ -55,7 +55,7 @@ def preflight():
         if not path.is_file():
             errors.append(f"缺少入口：{path.name}")
     sources = [*ROOT.glob("scripts/**/*.gd"), *ROOT.glob("scenes/**/*.tscn"),
-               *ROOT.glob("tools/*.gd"), *ROOT.glob("assets/**/*.tres"),
+               *ROOT.glob("tools/**/*.gd"), *ROOT.glob("assets/**/*.tres"),
                *ROOT.glob("assets/**/*.gdshader")]
     for path in sources:
         for resource in re.findall(r'"(res://[^"\n]+)"(?!\s*\+)', path.read_text()):
@@ -68,13 +68,14 @@ def preflight():
                 errors.append(f"翻译目录格式错误：{path.name}")
         except ValueError as exc:
             errors.append(f"JSON 格式错误：{path.name}：{exc}")
-    music = ROOT / "assets/audio/themes/catalog.json"
-    if music.is_file():
-        for entry in json.loads(music.read_text()):
-            if not (music.parent / entry["file"]).is_file():
-                errors.append(f"音乐目录引用缺失：{entry['file']}")
-    else:
-        errors.append("缺少音乐目录 assets/audio/themes/catalog.json")
+    for relative in ["assets/audio/music/themes/catalog.json", "assets/audio/music/catalog.json"]:
+        music = ROOT / relative
+        if music.is_file():
+            for entry in json.loads(music.read_text()):
+                if not (music.parent / entry["file"]).is_file():
+                    errors.append(f"音乐目录引用缺失：{entry['file']}")
+        else:
+            errors.append(f"缺少音乐目录 {relative}")
     if errors:
         raise ValueError("\n".join(errors))
     print("入口、资源引用、翻译 JSON 和音乐目录检查通过。")
@@ -120,7 +121,7 @@ def main():
                    output, "import", args.timeout)
             if args.command == "check":
                 startup = [godot, "--headless", "--path", str(ROOT), "--script",
-                           "res://tools/harness_smoke.gd", "--quit-after", str(args.frames)]
+                           "res://tools/checks/harness_smoke.gd", "--quit-after", str(args.frames)]
             else:
                 logged([godot, "--headless", "--path", str(ROOT), "--export-pack",
                         "macOS", str(output / "game.pck"), "--log-file",
@@ -129,7 +130,7 @@ def main():
                     raise ValueError("引擎未生成 game.pck。")
                 # Read resources from the exported pack; keep the bridge outside it.
                 startup = [godot, "--headless", "--main-pack", str(output / "game.pck"),
-                           "--script", str(ROOT / "tools/harness_smoke.gd"),
+                           "--script", str(ROOT / "tools/checks/harness_smoke.gd"),
                            "--quit-after", "120"]
             logged(startup + ["--log-file", str(output / "startup-engine.log"), "--",
                               "--harness-output=" + str(output)], output, "startup", args.timeout)
@@ -151,7 +152,7 @@ def main():
             if sys.platform != "darwin":
                 raise ValueError("build-macos 需要在 macOS 上执行。")
             (ROOT / "dist").mkdir(exist_ok=True)
-            logged([sys.executable, str(ROOT / "tools/build_macos.py"), godot],
+            logged([sys.executable, str(ROOT / "tools/build/build_macos.py"), godot],
                    output, "build-macos", args.timeout)
         report["status"] = "passed"
     except (OSError, ValueError, KeyError, TypeError) as exc:
