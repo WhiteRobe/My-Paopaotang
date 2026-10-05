@@ -85,7 +85,7 @@ func damage(c,owner=-1,hit_boxes=null):
 	if owner>=0 and owner<g.players.size() and g.players[owner].get("control",owner)==0:g.stat("crates")
 	if b.kind=="vault":
 		var locations=footprint(b)+[b.cell+Vector2i(-1,0),b.cell+Vector2i(2,1),b.cell+Vector2i(0,2),b.cell+Vector2i(1,-1)]
-		var rewards=[15,g.rng.randi_range(20,25),8,16,4,5]
+		var rewards=[15,g.rng.randi_range(20,25),7,16,4,5]
 		if g.mode==3:rewards.append(28)
 		var index=0
 		for tile in locations:

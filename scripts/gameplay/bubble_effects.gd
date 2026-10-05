@@ -28,7 +28,7 @@ func update(dt):
 			if field.cell==p.cell and hostile(p,field.owner):p.slow=maxf(p.slow,.3)
 		for f in g.blasts:
 			if not f.get("pulse_only",false) and f.get("element",0)==5 and f.cell==p.cell and f.owner>=0 and (f.owner==p.id or g.players[f.owner].team==p.team):
-				if p.trap>0:g.release_player(p)
+				if p.trap>0:g.release_player(p,f.owner)
 				p.grace=maxf(p.grace,.5);p.shield=maxf(p.shield,1.2)
 func hostile(p,owner):
 	if owner<0:return true
@@ -51,7 +51,7 @@ func clear_path(source,target,reach):
 func affect_player(p,f):
 	var element=f.get("element",0)
 	if element==5 and f.owner>=0 and (f.owner==p.id or g.players[f.owner].team==p.team):
-		if p.trap>0:g.release_player(p)
+		if p.trap>0:g.release_player(p,f.owner)
 		p.grace=maxf(p.grace,.5);p.shield=maxf(p.shield,1.2);return
 	if not hostile(p,f.owner) or p.dead or p.trap>0 or p.grace>0:return
 	if p.shield>0 or p.mount>0:
@@ -64,7 +64,7 @@ func affect_enemy(e,f):
 	var element=f.get("element",0)
 	if element==1:e.freeze=maxf(e.freeze,.65 if e.boss else 1.5)
 	elif element==4:e.slow=maxf(e.get("slow",0),1.2 if e.boss else 3.0)
-	g.adventure.hit_enemy(e,maxi(1,f.get("damage",1))+(1 if element==2 else 0),f.get("pulse_only",false))
+	g.adventure.hit_enemy(e,maxi(1,f.get("damage",1))+(1 if element==2 else 0),f.get("pulse_only",false),f.owner)
 func extra_cells(b,cells):
 	var element=b.get("element",0)
 	if element==2:

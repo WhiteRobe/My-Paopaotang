@@ -50,7 +50,7 @@ func setup():
 	for p in g.players:
 		p.team=0;p.grace=3;p.revive_wait=-1.0;p.pve_revives=1;p.cargo=0
 		# Every character begins with the same combat stats.
-		p.capacity=1;p.range=1;p.power=0;p.damage_level=0
+		p.capacity=1;p.range=1;p.damage_level=0
 	var points=[Vector2i(5,3),Vector2i(g.W-6,g.H-4),Vector2i(g.W-6,3),Vector2i(5,g.H-4)]
 	points=points.map(func(c):return g.nearest_playable(c))
 	for c in points:clear_route(c)
@@ -103,7 +103,7 @@ func spawn_wave():
 func advance_dialogue():
 	dialogue+=1
 	if dialogue>=stage.intro.size():g.state="play";g.countdown=1.5
-func hit_enemy(e,damage=1,pulse=false):
+func hit_enemy(e,damage=1,pulse=false,owner=-1):
 	# Separate bubble explosions may each hit; lingering hazards retain a cooldown.
 	if e.dead or (e.hit>0 and not pulse):return
 	e.hp=maxi(0,e.hp-damage);e.hit=.7;e.reaction=.5;
@@ -111,8 +111,9 @@ func hit_enemy(e,damage=1,pulse=false):
 	g.burst(g.center(e.cell),Color("edcfad"),8);g.sound("splash")
 	if e.hp<=0:
 		e.dead=true;g.stat("monsters")
+		if owner>=0 and owner<g.players.size():g.players[owner].round_monsters+=1
 		if e.boss:boss_dead=true;g.stat("bosses");g.announce(stage.boss+"恢复清醒了！")
-		elif g.rng.randf()<.42:g.drops[e.cell]=[4,5,7,8,15,28][g.rng.randi_range(0,5)]
+		elif g.rng.randf()<.42:g.drops[e.cell]=[4,5,7,16,15,28][g.rng.randi_range(0,5)]
 		if g.rng.randf()<.25:objects.append({"cell":e.cell,"type":"heart","active":false})
 func update(dt):
 	escort_hit=maxf(0,escort_hit-dt)
@@ -159,7 +160,8 @@ func update(dt):
 		for p in living:
 			if p.visual.distance_to(e.visual)<(.85 if e.boss else .60):
 				if e.cast_time<=0:start_attack_animation(e,0)
-				g.damage_player(p,-1)
+				if p.trap>0:g.kill_player(p,-2)
+				else:g.damage_player(p,-1)
 		if e.boss and e.attack<=0:
 			e.attack=(4.2 if e.hp>e.max_hp/2 else 2.8)*[1.3,1.0,.82][g.difficulty]
 			boss_attack(e,target.cell)
@@ -184,7 +186,9 @@ func update(dt):
 				elif o.type=="collect":p.cargo+=1;g.announce("携带物资，返回中央出口交付。")
 				else:
 					progress+=1
-					if o.type=="rescue" and p.get("control",p.id)==0:g.stat("rescues")
+					if o.type=="rescue":
+						p.round_rescues+=1
+						if p.get("control",p.id)==0:g.stat("rescues")
 				break
 	for p in living:
 		if p.cargo>0 and g.manhattan(p.cell,checkpoint)<=1:progress+=p.cargo;p.cargo=0;g.sound("pickup");g.announce("物资已交付！")

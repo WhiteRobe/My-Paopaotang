@@ -39,6 +39,7 @@ func rebuild():
 	entries.clear()
 	for kind in range(1,g.Catalog.ITEMS.size()):
 		var item=g.Catalog.ITEMS[kind]
+		if item.kind=="removed":continue
 		entries.append({"category":0,"name":item.name,"tip":item.tip,"kind":kind})
 	for kind in range(MISSION_OBJECTS.size()):entries.append({"category":0,"name":MISSION_OBJECTS[kind][0],"tip":MISSION_OBJECTS[kind][1],"kind":kind,"art":"mission"})
 	for kind in range(g.Catalog.CHARACTERS.size()):

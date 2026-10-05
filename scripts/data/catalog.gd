@@ -56,7 +56,7 @@ const ITEMS = [
 	{"name":"水柱延伸", "kind":"growth", "tip":"水柱长度加一，最多八格。", "color":"ffaf73"},
 	{"name":"飞踢靴", "kind":"active", "tip":"八秒内可撞击并踢动泡泡。", "color":"a6ed77"},
 	{"name":"成长跑鞋", "kind":"growth", "tip":"永久提升本局移速，最多五级。", "color":"fff09a"},
-	{"name":"泡泡强化", "kind":"growth", "tip":"每级缩短泡泡倒计时零点一秒，最多三级；余波不造成伤害。", "color":"8fbaff"},
+	{"name":"", "kind":"removed", "tip":"", "color":"8fbaff"},
 	{"name":"脱困针", "kind":"active", "tip":"被困后使用，立即脱困。", "color":"f9c9ef"},
 	{"name":"穿箱斗篷", "kind":"active", "tip":"六秒内可以穿过可破坏箱子。", "color":"baa9ff"},
 	{"name":"闪现珠", "kind":"active", "tip":"向面朝方向闪现至多三格。", "color":"80f3ef"},

@@ -294,7 +294,6 @@ func draw_lobby():
 		g.text_at("第五关起可带电脑队友",Vector2(25,244),12,Color("b4ddc2"),260)
 		g.text_at("电脑对手造型随关卡变化",Vector2(25,265),12,Color("a7c9d5"),260)
 	else:
-		g.text_at(g.loc("电脑补位：%d 人") % (g.seats-g.humans),Vector2(25,264),12,Color("b4ddc2"),260)
 		g.button(Vector2(25,271),Vector2(260,22),"高级规则 A")
 	g.button(start_rect().position,start_rect().size,"开始游戏",rows()[row]=="start")
 	card(Vector2(309,68),Vector2(292,137))
@@ -437,7 +436,7 @@ func draw_confirmation():
 	g.button(Vector2(145,243),Vector2(155,32),"取消",confirmation==0)
 	g.button(Vector2(335,243),Vector2(155,32),"确认恢复" if pending=="restore" else "备份并重置",confirmation==1)
 func draw_about():
-	heading("制作与版本","泡泡糖 · 像素群岛大冒险 · v4.7.8")
+	heading("制作与版本","泡泡糖 · 像素群岛大冒险 · v4.7.9")
 	card(Vector2(55,77),Vector2(530,237))
 	g.hero_sprite(Vector2(75,119),7,Vector2(110,145),0,0)
 	g.text_at("像素群岛，等你来冒险",Vector2(220,112),24,Color("ffe3ac"),340)

@@ -34,9 +34,13 @@ const COLORS = [Color("62ceff"),Color("ff8bad"),Color("ffe18a"),Color("a8efac"),
 const MOVE_KEYS = [[KEY_A,KEY_D,KEY_W,KEY_S],[KEY_LEFT,KEY_RIGHT,KEY_UP,KEY_DOWN],[KEY_J,KEY_L,KEY_I,KEY_K],[KEY_F,KEY_H,KEY_T,KEY_G]]
 const BOMB_KEYS = [KEY_SPACE,KEY_ENTER,KEY_U,KEY_R]
 const ITEM_KEYS = [KEY_Q,KEY_SLASH,KEY_O,KEY_Y]
+const PICKUP_KEYS=[KEY_E,KEY_PERIOD,KEY_SEMICOLON,KEY_V]
+const PICKUP_LABELS=["E",".",";","V"]
 const CONTROL_NAMES = ["WASD / 空格 / Q","方向键 / 回车 / /","IJKL / U / O","TFGH / R / Y"]
 const MODES = ["单人闯关","自由混战","组队对战","剧情冒险 PVE"]
-var font = preload("res://assets/fonts/pixel_font.tres")
+const UI_FONT=preload("res://assets/fonts/ui_font.tres")
+const ZH_FONT=preload("res://assets/fonts/ui_font_zh.tres")
+var font=UI_FONT
 var backgrounds: Array = []
 var rng = RandomNumberGenerator.new()
 var state = "menu"
@@ -124,7 +128,7 @@ var save_path = "user://profile.json"
 var profile: Dictionary = {}
 
 func default_profile():
-	var data={"version":4,"locale":"zh","adventure_bonus":{},"adventure_stage":1,"adventure_cleared":0,"cleared":0,"stage":1,"muted":false,"chars":[0,1,0,1],"settings":{"seat_roles":[-1,-1,-1,-1,-1,-1,-1,-1],"seat_characters":[-1,-1,-1,-1,-1,-1,-1,-1],"seat_teams":[-1,-1,-1,-1,-1,-1,-1,-1],"difficulty":1,"mode":0,"humans":1,"seats":4,"map":-1,"companion":true,"teams":0,"music_volume":75,"effects_volume":75},"stats":{"secrets":0,"pve_stages":0,"monsters":0,"bosses":0,"rounds":0,"wins":0,"losses":0,"draws":0,"bombs":0,"crates":0,"items":0,"rescues":0,"mounts":0,"deaths":0,"abandoned":0,"seconds":0.0}}
+	var data={"version":4,"locale":"zh","adventure_bonus":{},"adventure_stage":1,"adventure_cleared":0,"cleared":0,"stage":1,"muted":false,"chars":[0,1,0,1],"settings":{"seat_roles":[-1,-1,-1,-1,-1,-1,-1,-1],"seat_characters":[-1,-1,-1,-1,-1,-1,-1,-1],"seat_teams":[-1,-1,-1,-1,-1,-1,-1,-1],"difficulty":1,"mode":0,"humans":1,"seats":4,"map":-1,"companion":true,"teams":0,"music_volume":75,"effects_volume":75},"stats":{"kills":0,"secrets":0,"pve_stages":0,"monsters":0,"bosses":0,"rounds":0,"wins":0,"losses":0,"draws":0,"bombs":0,"crates":0,"items":0,"rescues":0,"mounts":0,"deaths":0,"abandoned":0,"seconds":0.0}}
 	for field in BATTLE_OPTIONS:data.settings["battle_"+field]=0
 	return data
 
@@ -135,7 +139,12 @@ func _ready():
 	add_child(world_clip)
 	world_canvas=preload("res://scripts/render/world_canvas.gd").new();world_canvas.g=self;world_clip.add_child(world_canvas)
 	game_overlay=preload("res://scripts/render/world_canvas.gd").new();game_overlay.g=self;game_overlay.overlay=true;game_overlay.z_index=3;add_child(game_overlay)
-	font.base_font.antialiasing = TextServer.FONT_ANTIALIASING_NONE
+	for face in [UI_FONT,ZH_FONT]:
+		face.base_font.antialiasing=TextServer.FONT_ANTIALIASING_GRAY
+		face.base_font.multichannel_signed_distance_field=true
+		face.base_font.allow_system_fallback=false
+		face.base_font.msdf_size=96
+		face.base_font.msdf_pixel_range=8
 	rng.randomize()
 	hd=HDArt.new(self)
 	hero_palette=preload("res://scripts/render/hero_palette.gd").new(self)
@@ -391,7 +400,7 @@ func new_round():
 		var bot=not roles[i]
 		var character=slot_character(i)
 		var c = round_spawns(count)[i]
-		var p = {"id":i,"control":control if not bot else -1,"team":team,"bot":bot,"character":character,"cell":c,"visual":Vector2(c),"from":Vector2(c),"move":1.0,"cool":0.0,"duration":0.15,"momentum":0.0,"velocity":Vector2.ZERO,"gait":0.0,"bubble_pass":Vector2i(-1,-1),"bubble_pass_cells":[],"push_cool":0.0,"drift":Vector2.ZERO,"motion_dir":Vector2i.ZERO,"starting":true,"pickup_lock":Vector2i(-1,-1),"range":1,"capacity":1,"speed":0,"power":0,"damage_level":0,"riding":0,"item":0,"element":0,"element_time":0.0,"hurt":0.0,"placing":0.0,"down":0.0,"pop_time":0.0,"pop_row":0,"trapped_elapsed":0.0,"recoil":Vector2.ZERO,"torch":0.0,"shield":0.0,"dash":0.0,"kick":0.0,"cloak":0.0,"magnet":0.0,"freeze":0.0,"slow":0.0,"trap":0.0,"grace":0.0,"warp":0.0,"flow":0.0,"think":0.0,"attack":0.0,"ai_dir":Vector2i.ZERO,"facing":Vector2i.DOWN,"steps":0,"dead":false,"mount":0,"mount_hp":0,"jump":0.0,"coins":0,"last_cell":c,"score":0}
+		var p = {"id":i,"control":control if not bot else -1,"team":team,"bot":bot,"character":character,"cell":c,"visual":Vector2(c),"from":Vector2(c),"move":1.0,"cool":0.0,"duration":0.15,"momentum":0.0,"velocity":Vector2.ZERO,"gait":0.0,"bubble_pass":Vector2i(-1,-1),"bubble_pass_cells":[],"push_cool":0.0,"drift":Vector2.ZERO,"motion_dir":Vector2i.ZERO,"starting":true,"pickup_lock":Vector2i(-1,-1),"range":1,"capacity":1,"speed":0,"damage_level":0,"riding":0,"item":0,"element":0,"element_time":0.0,"hurt":0.0,"placing":0.0,"down":0.0,"pop_time":0.0,"pop_row":0,"trapped_elapsed":0.0,"recoil":Vector2.ZERO,"torch":0.0,"shield":0.0,"dash":0.0,"kick":0.0,"cloak":0.0,"magnet":0.0,"freeze":0.0,"slow":0.0,"trap":0.0,"grace":0.0,"warp":0.0,"flow":0.0,"think":0.0,"attack":0.0,"ai_dir":Vector2i.ZERO,"facing":Vector2i.DOWN,"steps":0,"dead":false,"mount":0,"mount_hp":0,"jump":0.0,"coins":0,"last_cell":c,"score":0,"round_kills":0,"round_rescues":0,"round_monsters":0,"trap_owner":-1}
 		players.append(p)
 		if not bot:control+=1
 	stat("rounds")
@@ -662,6 +671,7 @@ func _unhandled_key_input(event):
 	for i in range(players.size()):
 		if players[i].bot: continue
 		if key==BOMB_KEYS[players[i].get("control",i)] or (players[i].get("control",i)==1 and key==KEY_KP_ENTER): place_bomb(i)
+		if key==PICKUP_KEYS[players[i].get("control",i)]:swap_item(i)
 		if key==ITEM_KEYS[players[i].get("control",i)] or (players[i].get("control",i)==1 and key==KEY_KP_DIVIDE):
 			if event.shift_pressed:swap_item(i)
 			else:use_item(i)
@@ -684,9 +694,9 @@ func _unhandled_input(event):
 		for i in range(3):
 			if Rect2(195,153+i*32,250,28).has_point(pos): pause_action(i)
 	elif state=="result":
-		if Rect2(195,210,250,30).has_point(pos):
+		if Rect2(195,278,250,28).has_point(pos):
 			var key=InputEventKey.new();key.keycode=KEY_ENTER;key.pressed=true;_unhandled_key_input(key)
-		elif Rect2(195,248,250,25).has_point(pos): return_to_menu()
+		elif Rect2(195,313,250,24).has_point(pos): return_to_menu()
 	elif state in ["stats","help","maps","characters"] and Rect2(540,10,80,22).has_point(pos):
 		frontend.back();refresh_preview()
 	elif state=="maps":
@@ -928,10 +938,9 @@ func movement_blocked(p,position,dir):
 		if other.id==p.id or other.dead or position.distance_to(other.visual)>=.52:continue
 		if other.trap>0:
 			if other.team==p.team:
-				release_player(other);burst(center(other.cell),Color("82f0c1"),14)
-				if p.get("control",p.id)==0:stat("rescues")
+				release_player(other,p.id);burst(center(other.cell),Color("82f0c1"),14)
 				announce("队友获救！")
-			else:kill_player(other)
+			else:kill_player(other,p.id)
 		# Actors may overlap; contact only resolves rescue or elimination.
 	return false
 
@@ -982,14 +991,23 @@ func damage_player(p,owner):
 		burst(center(p.cell),Color(Catalog.MOUNTS[p.mount].color),12)
 		if p.mount_hp<=0:p.mount=0;announce("坐骑替你挡住了水柱！")
 	else:
-		p.trap=8;p.trapped_elapsed=0;p.grace=.6
+		p.trap=8;p.trapped_elapsed=0;p.grace=.6;p.trap_owner=owner
 		sound("bubble-trap")
-func release_player(p):
+func release_player(p,rescuer=-1):
+	if p.trap>0 and rescuer>=0 and rescuer<players.size() and rescuer!=p.id and players[rescuer].team==p.team:
+		players[rescuer].round_rescues+=1
+		if players[rescuer].get("control",rescuer)==0:stat("rescues")
+	p.trap_owner=-1
 	p.trap=0;p.grace=1;p.pop_time=.55;p.pop_row=1
 	sound("bubble-pop")
 
-func kill_player(p):
+func kill_player(p,killer=-1):
 	if p.dead:return
+	if killer==-1:killer=p.get("trap_owner",-1)
+	if killer>=0 and killer<players.size() and killer!=p.id and players[killer].team!=p.team:
+		players[killer].round_kills+=1
+		if players[killer].get("control",killer)==0:stat("kills")
+	p.trap_owner=-1
 	p.dead=true;p.trap=0;p.down=1.05;p.pop_time=.55;p.pop_row=0
 	burst(center(p.cell),color_for(p),18)
 	if p.get("control",p.id)==0:stat("deaths")
@@ -999,26 +1017,27 @@ func random_drop():
 	if mode==3 and rng.randf()<.12:return 28
 	if (weather.nightness>.2 or weather.fog_strength>.2) and rng.randf()<.16:return rng.randi_range(26,27)
 	var roll=rng.randf()
-	if roll<.50:return [4,5,7,8][rng.randi_range(0,3)]
+	if roll<.50:return [4,5,7][rng.randi_range(0,2)]
 	if roll<.55:return 15
 	if roll<.58:return 16
 	if roll<.74:return rng.randi_range(20,25)
 	return [1,2,3,6,9,10,11,12,13,14,17,18][rng.randi_range(0,11)]
 
 func growth_full(p,kind):
-	return (kind==4 and p.capacity>=6) or (kind==5 and p.range>=8) or (kind==7 and p.speed>=5) or (kind==8 and p.power>=3) or (kind==16 and p.riding>=3) or (kind==28 and p.damage_level>=3)
+	return (kind==4 and p.capacity>=6) or (kind==5 and p.range>=8) or (kind==7 and p.speed>=5) or (kind==16 and p.riding>=3) or (kind==28 and p.damage_level>=3)
 
-func bubble_fuse(p):return (3.4 if rule()=="gravity" else 2.3)-.1*p.power
+func bubble_fuse(p):return 3.4 if rule()=="gravity" else 2.3
 
 func mount_durability(p):return (2 if p.mount==2 else 1)+mini(2,p.riding)
 
-func pickup(p,c):
+func pickup(p,c,manual=false):
 	if not drops.has(c):return
 	var kind=int(drops[c])
+	if kind==8:drops.erase(c);return
 	if growth_full(p,kind):return
 	var category=Catalog.ITEMS[kind].kind
-	if category=="active" and p.pickup_lock==c:return
-	if category=="active" and c!=p.cell and p.item!=0:return
+	if category=="active" and not manual and ((p.bot and p.pickup_lock==c) or (p.item!=0 and not p.bot)):return
+	if category=="active" and not manual and c!=p.cell and p.item!=0:return
 	var previous=p.item if category=="active" else 0
 	drops.erase(c)
 	if previous>0:
@@ -1030,7 +1049,6 @@ func pickup(p,c):
 		4:p.capacity=mini(6,p.capacity+1)
 		5:p.range=mini(8,p.range+1)
 		7:p.speed=mini(5,p.speed+1)
-		8:p.power=mini(3,p.power+1)
 		28:
 			p.damage_level=mini(3,p.damage_level+1)
 			announce(loc("泡泡伤害提升至 %d！") % (1+p.damage_level))
@@ -1049,18 +1067,27 @@ func pickup(p,c):
 	world_fx.impact(center(c),5,25)
 	sound("pickup")
 
+func nearby_active(p):
+	var chosen=null;var closest=1.15
+	for c in drops:
+		if grid[c.y][c.x]!=0 or Catalog.ITEMS[int(drops[c])].kind!="active":continue
+		var distance=p.visual.distance_to(Vector2(c))
+		if distance>=closest:continue
+		if c.x!=p.cell.x and c.y!=p.cell.y:
+			if grid[p.cell.y][c.x] in [1,2,3] or grid[c.y][p.cell.x] in [1,2,3]:continue
+		var visible=true
+		for step in range(1,5):
+			var along=p.visual.lerp(Vector2(c),step/4.0)
+			var tile=Vector2i(roundf(along.x),roundf(along.y))
+			if not inside(tile) or grid[tile.y][tile.x] in [1,2,3]:visible=false;break
+		if visible:closest=distance;chosen=c
+	return chosen
 func swap_item(i):
+	if i>=players.size():return
 	var p=players[i]
-	if p.dead or p.trap>0 or not drops.has(p.cell):return
-	var kind=int(drops[p.cell])
-	p.pickup_lock=p.cell
-	if Catalog.ITEMS[kind].kind!="active":return
-	var held=p.item
-	p.item=kind
-	if held>0:drops[p.cell]=held
-	else:drops.erase(p.cell)
-	if p.get("control",p.id)==0:stat("items")
-	sound("pickup")
+	if p.dead or p.trap>0 or p.freeze>0:return
+	var c=nearby_active(p)
+	if c!=null:pickup(p,c,true)
 
 func use_item(i):
 	if i>=players.size():return
@@ -1097,8 +1124,7 @@ func use_item(i):
 		var rescued=false
 		for other in players:
 			if not other.dead and other.team==p.team and other.trap>0 and manhattan(p.cell,other.cell)<=3:
-				release_player(other);rescued=true
-				if p.get("control",p.id)==0:stat("rescues")
+				release_player(other,p.id);rescued=true
 		if not rescued:return
 	elif kind==3:
 		for b in bombs.duplicate():
@@ -1133,7 +1159,7 @@ func place_bomb(i,cell=null):
 	if bombs.filter(func(b):return b.owner==i).size()>=p.capacity or bomb_at(c)!=null or not inside(c):return false
 	if grid[c.y][c.x] in [1,3]:return false
 	var fuse=bubble_fuse(p)
-	bombs.append({"cell":c,"owner":i,"range":p.range,"power":p.power,"timer":fuse,"fuse":fuse,"slide":Vector2i.ZERO,"step":0.0,"element":p.element,"damage":1+p.damage_level})
+	bombs.append({"cell":c,"owner":i,"range":p.range,"timer":fuse,"fuse":fuse,"slide":Vector2i.ZERO,"step":0.0,"element":p.element,"damage":1+p.damage_level})
 	for player in players:
 		if absf(player.visual.x-c.x)<.76 and absf(player.visual.y-c.y)<.76:
 			player.bubble_pass=c
@@ -1187,7 +1213,7 @@ func explode(b):
 		if grid[c.y][c.x]==2:crates.damage(c,b.owner,hit_boxes)
 		var next=bomb_at(c)
 		if next!=null:chained.append(next)
-		var lifetime=(.95 if b.get("element",0)==2 else .5)+.22*b.power
+		var lifetime=(.95 if b.get("element",0)==2 else .5)
 		var links=[]
 		for direction in DIRS:
 			if cells.has(c+direction):links.append(direction)
@@ -1312,7 +1338,7 @@ func flood_ring(ring):
 			collapsed_at[c]=round_time
 			burst(center(c),Color("ac9dc0"),5)
 			for p in players:
-				if p.cell==c:kill_player(p)
+				if p.cell==c:kill_player(p,-2)
 	announce("岛屿正在坍塌！向中央移动。")
 	shake=1.5
 	sound("splash")
@@ -1418,6 +1444,13 @@ func bot_direction(p,danger):
 	if danger.has(p.cell):
 		var escape=escape_direction(p,danger)
 		if escape!=Vector2i.ZERO:return escape
+	if mode in [1,2]:
+		var allies=players.filter(func(other):return other.id!=p.id and not other.dead and other.team==p.team and other.trap>0)
+		allies.sort_custom(func(a,b):return manhattan(a.cell,p.cell)<manhattan(b.cell,p.cell))
+		for ally in allies:
+			if p.visual.distance_to(ally.visual)<.52:release_player(ally,p.id);return Vector2i.ZERO
+			var rescue_dir=route_direction(p,ally.cell,danger)
+			if rescue_dir!=Vector2i.ZERO:return rescue_dir
 	if mode==3:
 		var leaders=players.filter(func(other):return not other.bot and not other.dead)
 		if not leaders.is_empty():
@@ -1475,6 +1508,7 @@ func bot_actions(p,danger):
 		if mode==3 and p.item in [12,13,17]:should_use=adventure.enemies.any(func(enemy):return not enemy.dead and manhattan(enemy.cell,p.cell)<=4)
 		if should_use:use_item(p.id)
 	if danger.has(p.cell) or p.get("attack",0)>0 or bomb_at(p.cell)!=null:return
+	if mode in [1,2] and players.any(func(other):return not other.dead and other.team==p.team and other.trap>0):return
 	var wants_bomb=adventure.should_bomb(p) if mode==3 else false
 	for other in players:
 		if not other.dead and other.team!=p.team and manhattan(other.cell,p.cell)<=p.range+1:wants_bomb=true
@@ -1493,8 +1527,10 @@ func bot_actions(p,danger):
 	if escape_direction(p,hypothetical)!=Vector2i.ZERO:place_bomb(p.id)
 
 func rect(pos,size,color):canvas.draw_rect(Rect2(pos,size),color)
-func pixel_size(size):return 12 if size<18 else (24 if size<32 else 36)
-func loc(message):return i18n.render(message) if i18n else str(message)
+func pixel_size(size):return clampi(size,7,36)
+func loc(message):
+	font=ZH_FONT if i18n and i18n.locale=="zh" else UI_FONT
+	return i18n.render(message) if i18n else str(message)
 func apply_language(index):
 	i18n.set_language(I18n.LOCALES[index]);profile.locale=i18n.locale;get_tree().root.title=loc("泡泡糖 · 像素群岛大冒险");save_profile();encyclopedia.rebuild();queue_redraw()
 func draw_languages():
@@ -1583,9 +1619,15 @@ func health_bar(pos,hp,maximum,width=20,height=2):
 		canvas.draw_string(font,heart+Vector2(8,6),label,HORIZONTAL_ALIGNMENT_LEFT,-1,7,Color("fff0df"))
 
 func item_icon(pos,kind,side=20):
-	if kind<=0:return
+	if kind<=0 or kind==8:return
 	if kind==28:hd.sprite("items/pressure-core-v464.png",0,pos,Vector2.ONE*side)
 	else:hd.sprite("items/remote-hd.png" if kind==3 else "items/items-hd.png",0 if kind==3 else kind,pos,Vector2.ONE*side)
+	if kind in [4,5,7,16,28]:
+		var scale_factor=maxf(.8,side/20.0)
+		var at=pos+Vector2(side-3*scale_factor,2*scale_factor)
+		rect(at-Vector2.ONE*2.5*scale_factor,Vector2.ONE*5*scale_factor,Color(.03,.12,.24,.82))
+		rect(at+Vector2(-2,-.65)*scale_factor,Vector2(4,1.3)*scale_factor,Color("68ceff"))
+		rect(at+Vector2(-.65,-2)*scale_factor,Vector2(1.3,4)*scale_factor,Color("68ceff"))
 func premium_hero_region(character,direction=0):return hd.region(HDArt.HERO_VIEWS[direction],character)
 func hero_piece(pos,size,source,part,offset=Vector2.ZERO,tint=Color.WHITE,direction=0):
 	var ratio=size/Vector2(96,112)
@@ -1781,7 +1823,6 @@ func draw_bomb(b):
 	if element>0:
 		canvas.draw_arc(pos,7.3,elapsed*2,elapsed*2+4.5,20,color.lightened(.3),1)
 		item_icon(pos-Vector2(4,4),19+element,8)
-	if b.power>0:canvas.draw_arc(pos,7.1,elapsed,elapsed+4.8,20,Color("fff6b1"),1)
 	rect(pos+Vector2(-5,8),Vector2(10,1),INK)
 	rect(pos+Vector2(-5,8),Vector2(10*clampf(b.timer/b.fuse,0,1),1),CREAM)
 func draw_warning(b):
@@ -1929,7 +1970,7 @@ func draw_sidebar():
 				label+="…"
 			canvas.draw_string(font,Vector2(16,146+i*13),label,HORIZONTAL_ALIGNMENT_LEFT,-1,9,Color(1,.89,.66,opacity))
 	else:wrapped(Catalog.ITEMS[p.item].tip,Vector2(13,139),6,Color("aac0cc"),4)
-	var kinds=[4,5,7,8,16];var values=[p.capacity,p.range,p.speed,p.power,p.riding]
+	var kinds=[4,5,7,16];var values=[p.capacity,p.range,p.speed,p.riding]
 	if mode==3:kinds.append(28);values.append(1+p.damage_level)
 	for i in range(kinds.size()):
 		item_icon(Vector2(13,209+i*19),kinds[i],14)
@@ -1980,7 +2021,7 @@ func draw_map_browser():
 		panel(pos,Vector2(147,52),Color("ffe08e") if i==selection else Color("527a8c"))
 		text_at("%02d %s" % [i+1,map.name],pos+Vector2(6,17),12,Color("ffe08e") if i==selection else CREAM)
 		canvas.draw_texture_rect(backgrounds[map.theme],Rect2(pos+Vector2(7,23),Vector2(48,23)),false)
-		item_icon(pos+Vector2(59,24),[1,11,5,15,10,2,12,12,7,3,8,6,15,19,3,14,8,17,6,12][i%20],20)
+		item_icon(pos+Vector2(59,24),[1,11,5,15,10,2,12,12,7,3,16,6,15,19,3,14,7,17,6,12][i%20],20)
 		text_at(["海港","森林","冰雪","沙漠","火山","工厂","糖果","星空","沼泽","遗迹","深海","空港","王城","洞窟"][map.theme],pos+Vector2(83,39),12,Color("a8c5c4"))
 	button(Vector2(12,331),Vector2(100,23),"上一页")
 	button(Vector2(528,331),Vector2(100,23),"下一页")
@@ -2022,13 +2063,13 @@ func draw_help():
 	page_header("道具图鉴与操作")
 	text_at("玩家1：WASD / 空格 / Q    玩家2：方向键 / 回车 / /",Vector2(20,57),12)
 	text_at("玩家3：IJKL / U / O      玩家4：TFGH / R / Y",Vector2(20,75),12)
-	var kinds=range(1,19)+range(20,28)
+	var kinds=(range(1,19)+range(20,29)).filter(func(kind):return kind!=8)
 	for slot in range(kinds.size()):
 		var i=kinds[slot]
 		var pos=Vector2(18+(slot%7)*88,86+int(slot/7)*46)
 		item_icon(pos,i,24)
 		text_at(Catalog.ITEMS[i].name,pos+Vector2(0,36),12,Color(Catalog.ITEMS[i].color),82)
-	wrapped("轮箱可以推动；加固箱两点耐久，宝库箱八点耐久、丰厚掉落。水柱困住角色八秒，队友触碰可救援。走过道具自动拾取，成长每局重置。",Vector2(20,280),48,CREAM)
+	wrapped("轮箱可以推动；加固箱两点耐久，宝库箱八点耐久。空手自动拾取；手持主动道具时按 E / . / ; / V 更换。蓝色加号代表成长，成长每局重置。",Vector2(20,280),48,CREAM)
 	text_at("ESC / P 暂停，可返回大厅或保存并退出；M 声音。",Vector2(20,346),12,Color("ffe08e"))
 
 func draw_pause():
@@ -2038,22 +2079,27 @@ func draw_pause():
 	for i in range(3):button(Vector2(195,153+i*32),Vector2(250,28),["继续对战","返回大厅（记录退出）","保存并退出游戏"][i],i==quit_selection)
 	centered("上下选择 / 回车确认 / ESC 继续",294,12)
 func draw_result():
-	rect(Vector2.ZERO,Vector2(640,360),Color(.03,.06,.12,.82))
-	panel(Vector2(135,91),Vector2(370,206),Color("ffe08e"))
-	centered(result_text,133,24,Color("ffe08e"))
+	rect(Vector2.ZERO,Vector2(640,360),Color(.03,.06,.12,.88))
+	panel(Vector2(50,24),Vector2(540,322),Color("ffe08e"))
+	centered(result_text,58,23,Color("ffe08e"))
 	if mode==3:
-		wrapped(adventure.stage.outro if result_winner==0 else "调整道具与走位，再挑战本关。章节进度已保存。",Vector2(156,158),27,Color("bfe2ce"))
+		wrapped(adventure.stage.outro if result_winner==0 else "调整道具与走位，再挑战本关。章节进度已保存。",Vector2(72,82),41,Color("bfe2ce"),2)
 	elif mode==0:
-		centered(loc("第%d关 / %s") % [campaign_stage,Catalog.MAPS[arena].name],162,12)
-		centered("进度与统计已保存",186,12,Color("a8dbc3"))
+		centered(loc("第%d关 / %s") % [campaign_stage,Catalog.MAPS[arena].name],89,11)
 	else:
 		var label=loc("蓝队 %d : %d 桃队") % [scores[0],scores[1]] if mode==2 else "比分  "+" : ".join(scores.slice(0,players.size()).map(func(value):return str(value)))
-		centered(label,168,12)
-		centered("两胜夺冠 / 统计已保存",189,12,Color("a8dbc3"))
+		centered(label,89,11)
+	for i in range(players.size()):
+		var p=players[i];var pos=Vector2(70+(i%2)*255,115+int(i/2)*38)
+		panel(pos,Vector2(245,34),color_for(p))
+		face_portrait(pos+Vector2(5,3),p.character,Vector2(24,27),p.id)
+		text_at(("B" if p.bot else "P")+str(p.id+1)+" · "+loc(Catalog.CHARACTERS[p.character].name)+" · "+loc("电脑" if p.bot else "玩家"),pos+Vector2(35,12),9,color_for(p),203)
+		var detail=loc("击杀 %d · 救援 %d") % [p.round_kills,p.round_rescues]
+		if mode==3:detail+=" · "+loc("击败怪物 %d") % p.round_monsters
+		text_at(detail,pos+Vector2(35,27),10,CREAM,203)
 	var action=(("下一节" if adventure_stage<20 else "重温故事") if result_winner==0 else "重试本节") if mode==3 else ("下一关" if campaign_stage<20 else "重新冒险") if mode==0 and result_winner==0 else ("再战本关" if mode==0 else ("新一场" if match_over else "下一局"))
-	button(Vector2(195,210),Vector2(250,30),action+" / 回车",true)
-	button(Vector2(195,248),Vector2(250,25),"返回大厅 / ESC")
-	if notice_time>0:centered(notice,323,12,Color("ffe08e"))
+	button(Vector2(195,278),Vector2(250,28),action+" / 回车",true)
+	button(Vector2(195,313),Vector2(250,24),"返回大厅 / ESC")
 
 func close_game():
 	if not round_recorded:stat("abandoned");round_recorded=true
@@ -2167,6 +2213,7 @@ func draw_world():
 	for p in particles:rect(p.pos.round(),Vector2(2,2),p.color)
 	world_fx.draw_air()
 	map_rules.draw_overlay()
+	draw_pickup_prompts()
 	canvas.draw_set_transform(Vector2.ZERO)
 
 func draw_drop(c):
@@ -2214,3 +2261,21 @@ func draw_game_overlay():
 func camera_contains(position):
 	var local=position-camera
 	return local.x>=.8 and local.x<=VIEW_SIZE.x-1.3 and local.y>=1.6 and local.y<=VIEW_SIZE.y-1.8
+
+func draw_pickup_prompts():
+	var prompts={}
+	for p in players:
+		if p.bot or p.dead or p.trap>0 or p.freeze>0 or p.item==0:continue
+		var c=nearby_active(p)
+		if c==null:continue
+		if not prompts.has(c):prompts[c]=[]
+		prompts[c].append({"label":PICKUP_LABELS[p.control],"color":COLORS[p.id]})
+	for c in prompts:
+		var total=prompts[c].size()*9.0
+		var pos=center(c)+Vector2(-total/2,-16+sin(elapsed*3)*.3)
+		for n in range(prompts[c].size()):
+			var entry=prompts[c][n];var at=pos+Vector2(n*9,0)
+			rect(at,Vector2(8,10),Color(.04,.11,.18,.88))
+			canvas.draw_rect(Rect2(at,Vector2(8,10)),Color(entry.color,.8),false,.5)
+			var width=font.get_string_size(entry.label,HORIZONTAL_ALIGNMENT_LEFT,-1,7).x
+			canvas.draw_string(font,at+Vector2((8-width)/2,7.5),entry.label,HORIZONTAL_ALIGNMENT_LEFT,-1,7,Color("fff5db"))

@@ -19,6 +19,7 @@ func update(dt):
 	for event in events:event.life-=dt
 	events=events.filter(func(event):return event.life>0)
 func design_board(pve=false):
+	add_permanent_cover(pve)
 	# Boss courts use perimeter cover, leaving the central dodge lane clear.
 	if pve and g.adventure.stage.mission=="boss":
 		for c in [Vector2i(6,7),Vector2i(7,7),Vector2i(14,8),Vector2i(14,9),Vector2i(10,11),Vector2i(11,11)]:
@@ -41,8 +42,9 @@ func design_board(pve=false):
 					if design_reserved(mirror,false):continue
 					g.grid[mirror.y][mirror.x]=2
 				g.grid[c.y][c.x]=2
-func design_reserved(c,pve):
-	if not g.inside(c) or g.grid[c.y][c.x]!=0 or g.terrain.has(c):return true
+func design_reserved(c,pve,allow_crate=false):
+	if not g.inside(c) or g.grid[c.y][c.x] not in ([0,2] if allow_crate else [0]) or g.terrain.has(c):return true
+	if g.gold_boxes.has(c) or g.vine_cells.has(c):return true
 	if c.x==g.W/2 or c.y==g.H/2:return true
 	for spawn in g.SPAWNS:
 		if g.manhattan(c,spawn)<=3:return true
@@ -54,6 +56,42 @@ func design_reserved(c,pve):
 			if g.manhattan(c,enemy.cell)<(4 if enemy.boss else 2):return true
 		if g.manhattan(c,g.adventure.checkpoint)<=3:return true
 	return false
+func add_permanent_cover(pve):
+	# Short piers and paired pillars remain useful after the crates are destroyed.
+	for y in range(4,g.H-4,6):
+		for x in range(4+(3 if (y/6)%2 else 0),g.W-4,6):
+			var cells=[Vector2i(x,y),Vector2i(x,y)+(Vector2i.RIGHT if (g.arena+x+y)%2 else Vector2i.DOWN)]
+			if not pve:
+				for c in cells.duplicate():
+					var mirror=Vector2i(g.W-1-c.x,g.H-1-c.y)
+					if not cells.has(mirror):cells.append(mirror)
+			if cells.any(func(c):return design_reserved(c,pve,true)):continue
+			var crowded=false
+			for c in cells:
+				var neighbors=0
+				for d in g.DIRS:
+					if g.grid[c.y+d.y][c.x+d.x]==1:neighbors+=1
+				if neighbors>1:crowded=true
+			if crowded:continue
+			var previous=[]
+			var entrances=[]
+			for c in cells:
+				previous.append(g.grid[c.y][c.x]);g.grid[c.y][c.x]=1
+			for c in cells:
+				for d in g.DIRS:
+					var next=c+d
+					if g.inside(next) and g.grid[next.y][next.x] in [0,2] and not entrances.has(next):entrances.append(next)
+			# Include breakable crates in the route check: no permanent sealed pockets.
+			var seen={};var queue=[]
+			if not entrances.is_empty():queue.append(entrances[0]);seen[entrances[0]]=true
+			var head=0
+			while head<queue.size():
+				var c=queue[head];head+=1
+				for d in g.DIRS:
+					var next=c+d
+					if g.inside(next) and g.grid[next.y][next.x] in [0,2] and not seen.has(next):seen[next]=true;queue.append(next)
+			if entrances.any(func(c):return not seen.has(c)):
+				for i in range(cells.size()):g.grid[cells[i].y][cells[i].x]=previous[i]
 func draw_ground():
 	var theme=g.Catalog.MAPS[g.arena].theme
 	var paving=[1,0,0,3,2,2,3,3,0,3,0,3,3,0][theme]

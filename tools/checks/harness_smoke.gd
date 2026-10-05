@@ -34,7 +34,7 @@ func boot():
 		if stage.map<0 or stage.map>=game.Catalog.MAPS.size():errors.append("Invalid story map: "+stage.name)
 		if stage.chapter<0 or stage.chapter>=game.adventure.Story.CHAPTERS.size():errors.append("Invalid story chapter: "+stage.name)
 	var content={"maps":game.Catalog.MAPS.size(),"themes":game.Catalog.THEMES.size(),"full_scores":game.Catalog.THEMES.size()+new_music.size(),
-		"item_entries":game.Catalog.ITEMS.size(),"characters":game.Catalog.CHARACTERS.size(),
+		"item_entries":game.Catalog.ITEMS.filter(func(item):return item.kind!="removed").size(),"characters":game.Catalog.CHARACTERS.size(),
 		"mount_entries":game.Catalog.MOUNTS.size(),"chapters":game.adventure.Story.CHAPTERS.size(),
 		"story_stages":game.adventure.Story.STAGES.size(),"locales":game.I18n.LOCALES,
 		"state":game.state,"save_path":game.save_path,"errors":errors}
