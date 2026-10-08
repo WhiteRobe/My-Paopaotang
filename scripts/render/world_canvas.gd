@@ -15,8 +15,9 @@ func _draw():
 			position=-g.ORIGIN-g.camera*g.TILE
 			g.draw_world()
 			var base=g.ORIGIN+g.camera*g.TILE
-			g.rect(base,Vector2(get_parent().size.x,19),Color(.04,.1,.16,.72))
+			g.rect(base,Vector2(get_parent().size.x,29),Color(.04,.1,.16,.72))
 			g.text_at("P"+str(p.id+1)+" · "+str(p.race_lap)+"/"+str(g.racing.laps)+" "+g.loc("圈")+" · "+str(snappedf(p.velocity.length(),.1)),base+Vector2(5,13),8,g.CREAM)
+			g.text_at(g.loc("泡泡%d · 水柱%d · 速度%d") % [p.capacity,p.range,p.speed],base+Vector2(5,25),7,Color("acd5df"))
 			if not p.race_finished:
 				var cp=g.racing.checkpoints[p.race_next]
 				var delta=cp.pos-p.visual

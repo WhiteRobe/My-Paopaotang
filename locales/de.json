@@ -849,7 +849,7 @@
   "分": "Punkte",
   "名": "Platz",
   "剩余 %d 秒": "Noch %d Sekunden",
-  "泡泡糖 · 像素群岛大冒险 · v4.9.0": "Bubblegum · Pixelinseln-Abenteuer · v4.9.0",
+  "泡泡糖 · 像素群岛大冒险 · v4.9.1": "Bubblegum · Pixelinseln-Abenteuer · v4.9.1",
   "%d 分": "%d Punkte",
   "复活 %d 秒": "Neustart in %ds",
   "%d/%d 圈 · CP%d": "%d/%d Runden · CP%d",
@@ -857,5 +857,6 @@
   "%d 圈": "%d Runden",
   "%d 秒": "%d Sekunden",
   "%d 圈 · %d 秒 · 分屏竞速": "%d Runden · %ds · Geteilter Bildschirm",
-  "第 %d 名 · %d 分": "Platz %d · %d Punkte"
+  "第 %d 名 · %d 分": "Platz %d · %d Punkte",
+  "泡泡%d · 水柱%d · 速度%d": "Blasen %d · Reichweite %d · Tempo %d"
 }

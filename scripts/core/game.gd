@@ -843,7 +843,7 @@ func update_game(dt):
 				p.think=[.28,.14,.08][difficulty]
 				p.ai_dir=racing.bot_direction(p,danger) if mode==1 else bot_direction(p,danger)
 				if mode!=1:bot_actions(p,danger)
-				elif difficulty>0 and bombs.size()<12 and rng.randf()<.015:bot_actions(p,danger)
+				elif not p.car or (difficulty>0 and bombs.size()<12 and rng.randf()<.015):bot_actions(p,danger)
 			dir=Vector2(p.ai_dir)
 			# Bot routes still use tile centres, but position and collision are continuous.
 			if dir.x!=0:dir.y=clampf(roundf(p.visual.y)-p.visual.y,-.8,.8)*4
@@ -923,8 +923,7 @@ func move_player(p,input_direction,dt):
 	var target_velocity=dir*speed
 	if terrain.has(p.cell) and terrain[p.cell].type=="flow":target_velocity+=Vector2(terrain[p.cell].dir)*speed*.38
 	if mode==1 and p.get("car",false):
-		target_velocity=racing.vehicle_target(p,dir,dt)
-		p.velocity=p.velocity.move_toward(target_velocity,dt*(2.2 if dir!=Vector2.ZERO else 3.0))
+		p.velocity=racing.vehicle_velocity(p,dir,dt)
 	else:p.velocity=p.velocity.move_toward(target_velocity,dt*(25.0 if ice else 48.0 if dir!=Vector2.ZERO else 65.0))
 	var before=p.visual
 	var displacement=p.velocity*dt
@@ -1079,7 +1078,10 @@ func scatter_growth():
 	death_loot=death_loot.filter(func(loot):return not loot.items.is_empty())
 
 func random_drop():
-	if mode==1 and rng.randf()<.45:return 31
+	if mode==1:
+		var race_roll=rng.randf()
+		if race_roll<.18:return 31
+		if race_roll<.78:return [4,5,7][rng.randi_range(0,2)]
 	var rare=rng.randf()
 	if rare<.01:return 29
 	if rare<.02:return 30

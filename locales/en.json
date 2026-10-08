@@ -849,7 +849,7 @@
   "分": "points",
   "名": "place",
   "剩余 %d 秒": "%d seconds remaining",
-  "泡泡糖 · 像素群岛大冒险 · v4.9.0": "Bubblegum · Pixel Islands Adventure · v4.9.0",
+  "泡泡糖 · 像素群岛大冒险 · v4.9.1": "Bubblegum · Pixel Islands Adventure · v4.9.1",
   "%d 分": "%d points",
   "复活 %d 秒": "Respawn in %ds",
   "%d/%d 圈 · CP%d": "%d/%d laps · CP%d",
@@ -857,5 +857,6 @@
   "%d 圈": "%d laps",
   "%d 秒": "%d seconds",
   "%d 圈 · %d 秒 · 分屏竞速": "%d laps · %ds · Split screen",
-  "第 %d 名 · %d 分": "Place %d · %d points"
+  "第 %d 名 · %d 分": "Place %d · %d points",
+  "泡泡%d · 水柱%d · 速度%d": "Bubbles %d · Range %d · Speed %d"
 }

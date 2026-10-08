@@ -24,7 +24,7 @@ for size in [16,32,128,256,512]:
     for factor,suffix in [(1,''),(2,'@2x')]:
         im.resize((size*factor,size*factor), Image.Resampling.NEAREST).save(iconset/f'icon_{size}x{size}{suffix}.png')
 subprocess.run(['iconutil','-c','icns',str(iconset),'-o',str(res/'Game.icns')],check=True)
-info = dict(CFBundleExecutable='PaopaoTang', CFBundleName='泡泡糖', CFBundleDisplayName='泡泡糖', CFBundleIdentifier='local.paopaotang.splashduel', CFBundlePackageType='APPL', CFBundleShortVersionString='4.9.0', CFBundleVersion='4.9.0', CFBundleIconFile='Game.icns', CFBundleDevelopmentRegion='zh_CN', LSMinimumSystemVersion='10.13', LSApplicationCategoryType='public.app-category.games', NSHighResolutionCapable=True, NSSupportsAutomaticGraphicsSwitching=True)
+info = dict(CFBundleExecutable='PaopaoTang', CFBundleName='泡泡糖', CFBundleDisplayName='泡泡糖', CFBundleIdentifier='local.paopaotang.splashduel', CFBundlePackageType='APPL', CFBundleShortVersionString='4.9.1', CFBundleVersion='4.9.1', CFBundleIconFile='Game.icns', CFBundleDevelopmentRegion='zh_CN', LSMinimumSystemVersion='10.13', LSApplicationCategoryType='public.app-category.games', NSHighResolutionCapable=True, NSSupportsAutomaticGraphicsSwitching=True)
 with (app/'Contents/Info.plist').open('wb') as f: plistlib.dump(info,f)
 shutil.copytree(ROOT/'licenses',res/'licenses',dirs_exist_ok=True)
 subprocess.run(['codesign','--force','--deep','--sign','-',str(app)],check=True)
