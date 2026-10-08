@@ -46,9 +46,9 @@ const MAPS = [
 	{"name":"迷雾矿道","theme":13,"rule":"cavefog","seconds":200,"layout":41,"night":true,"fog":true,"tip":"浓雾周期覆盖矿道，风会暂时吹散雾气。手持火把能扩大视野。"},
 	{"name":"地下暗河","theme":13,"rule":"flow","seconds":195,"layout":42,"night":true,"tip":"暗河水流推动角色，沿火把探索通道。泡泡爆炸前逐渐发亮。"},
 	{"name":"蝠影回音厅","theme":13,"rule":"echo","seconds":210,"layout":43,"night":true,"tip":"蝙蝠飞过钟乳石洞厅。爆炸留下回声，火把和照明弹帮助观察退路。"},
-	{"name":"海港环岛赛道","theme":0,"rule":"race","seconds":180,"layout":44,"tip":"驾驶赛车依次通过检查点，完成三圈。"},
+	{"name":"海港内湾赛道","theme":0,"rule":"race","seconds":180,"layout":44,"tip":"驾驶赛车依次通过检查点，完成三圈。"},
 	{"name":"森林折返赛道","theme":1,"rule":"race","seconds":180,"layout":45,"tip":"弯道提前减速，避免冲出赛车路线。"},
-	{"name":"工厂双弯赛道","theme":5,"rule":"race","seconds":180,"layout":46,"tip":"利用惯性过弯，争夺固定赛车补给。"}
+	{"name":"工厂交叉赛道","theme":5,"rule":"race","seconds":180,"layout":46,"tip":"利用惯性过弯，争夺固定赛车补给。"}
 ]
 const ITEMS = [
 	{"name":"空", "kind":"none", "tip":"炸箱子或抢中央补给。", "color":"a9b8ca"},

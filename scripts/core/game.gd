@@ -2132,7 +2132,8 @@ func mini_board(pos,step=8):
 			if arena>=Racing.FIRST_MAP:
 				var tile=0 if racing.road.has(Vector2i(x,y)) else 2 if cell==1 else 1
 				hd.sprite(Racing.GROUND,(arena-Racing.FIRST_MAP)*3+tile,pos+Vector2(x,y)*step,Vector2.ONE*step,Color.WHITE,false)
-				if cell==2:rect(pos+Vector2(x,y)*step,Vector2.ONE*step,Color(.55,.34,.18,.7))
+				if cell==1 and racing.cover.has(Vector2i(x,y)):hd.theme_sprite(Catalog.MAPS[arena].theme,2,pos+Vector2(x,y)*step,Vector2.ONE*step,Color.WHITE,false)
+				elif cell==2:rect(pos+Vector2(x,y)*step,Vector2.ONE*step,Color(.55,.34,.18,.7))
 			else:hd.theme_sprite(theme,kind,pos+Vector2(x,y)*step,Vector2(step,step),Color.WHITE,false)
 	for c in terrain:
 		var type=terrain[c].type
@@ -2298,7 +2299,7 @@ func draw_world():
 	for y in range(maxi(0,int(camera.y)-2),mini(H,int(camera.y+VIEW_SIZE.y)+3)):
 		for x in range(maxi(0,int(camera.x)-2),mini(W,int(camera.x+VIEW_SIZE.x)+3)):
 			var c=Vector2i(x,y)
-			if arena<44 and not map_void.has(c) and (grid[y][x]==1 or (grid[y][x]==2 and crates.at(c)==null)):depth.append({"y":float(y+1)*TILE,"kind":"wall","data":c})
+			if not map_void.has(c) and ((arena<44 and (grid[y][x]==1 or (grid[y][x]==2 and crates.at(c)==null))) or (arena>=44 and racing.cover.has(c) and grid[y][x]==1)):depth.append({"y":float(y+1)*TILE,"kind":"wall","data":c})
 	for c in terrain:
 		if is_shelter(c) and grid[c.y][c.x]==0:depth.append({"y":c.y*TILE+16.0,"kind":"shelter","data":c})
 		if terrain[c].type=="lamp" and grid[c.y][c.x]==0:depth.append({"y":c.y*TILE+14.0,"kind":"lamp","data":c})

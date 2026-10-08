@@ -13,6 +13,8 @@ var route:Array=[]
 var checkpoints:Array=[]
 var road={}
 var stations:Array=[]
+var sidings={}
+var cover={}
 var station_timers={}
 var finish_order:Array=[]
 var overtime=0.0
@@ -27,9 +29,10 @@ func active():return g.mode==1
 func build(index):
 	g.arena=index;g.W=28;g.H=19;g.camera=Vector2.ZERO;g.map_void.clear()
 	g.grid.clear();g.terrain.clear();g.gates.clear();g.vine_cells.clear();g.gold_boxes.clear()
-	route=[Vector2i(1,1),Vector2i(25,1),Vector2i(25,16),Vector2i(1,16)]
-	if index==45:route=[Vector2i(1,1),Vector2i(25,1),Vector2i(25,8),Vector2i(18,8),Vector2i(18,16),Vector2i(1,16)]
-	elif index==46:route=[Vector2i(1,1),Vector2i(18,1),Vector2i(18,8),Vector2i(25,8),Vector2i(25,16),Vector2i(1,16)]
+	# Each circuit has distinct corner order; the factory crosses itself at its hub.
+	route=[Vector2i(1,1),Vector2i(25,1),Vector2i(25,7),Vector2i(17,7),Vector2i(17,16),Vector2i(1,16),Vector2i(1,10),Vector2i(9,10),Vector2i(9,6),Vector2i(1,6)]
+	if index==45:route=[Vector2i(1,1),Vector2i(25,1),Vector2i(25,6),Vector2i(16,6),Vector2i(16,11),Vector2i(25,11),Vector2i(25,16),Vector2i(1,16),Vector2i(1,11),Vector2i(9,11),Vector2i(9,6),Vector2i(1,6)]
+	elif index==46:route=[Vector2i(1,8),Vector2i(25,8),Vector2i(25,1),Vector2i(13,1),Vector2i(13,16),Vector2i(1,16)]
 	road.clear();checkpoints.clear();stations.clear();station_timers.clear()
 	for i in range(route.size()):
 		var a=route[i];var b=route[(i+1)%route.size()];var dir=(b-a).sign();var c=a
@@ -39,7 +42,31 @@ func build(index):
 			if c==b:break
 			c+=dir
 		checkpoints.append({"pos":Vector2(a+b)/2+Vector2.ONE*.5,"dir":Vector2(dir)})
-	# Two starting rows stay on the track; a single inner supply strip replaces the yard.
+	if index==46:checkpoints[0].pos=Vector2(19.5,8.5)
+	# Supply bays join the inner lane, leaving the outer lane open for racing.
+	stations=[route[1]+Vector2i.DOWN,route[-1]+Vector2i.RIGHT]
+	if index==45:stations=[Vector2i(21,2),Vector2i(5,16)]
+	elif index==46:stations=[Vector2i(21,9),Vector2i(2,13)]
+	sidings.clear();cover.clear()
+	var links=[ [Vector2i(5,2),Vector2i(5,6)], [Vector2i(10,13),Vector2i(18,13)], [Vector2i(21,2),Vector2i(21,7)] ]
+	var islands=[Vector2i(12,4),Vector2i(3,12),Vector2i(12,13),Vector2i(21,11),Vector2i(23,14)]
+	if index==45:
+		links=[[Vector2i(5,2),Vector2i(5,6)],[Vector2i(20,7),Vector2i(20,11)],[Vector2i(5,12),Vector2i(5,16)],[Vector2i(10,8),Vector2i(16,8)]]
+		islands=[Vector2i(11,4),Vector2i(3,8),Vector2i(12,13),Vector2i(21,13),Vector2i(22,8)]
+	elif index==46:
+		links=[[Vector2i(18,2),Vector2i(18,8)],[Vector2i(2,12),Vector2i(13,12)],[Vector2i(7,9),Vector2i(7,16)]]
+		islands=[Vector2i(16,4),Vector2i(21,4),Vector2i(4,10),Vector2i(10,13),Vector2i(4,3),Vector2i(8,4),Vector2i(18,13),Vector2i(23,14)]
+	for link in links:
+		var c=link[0];var dir=(link[1]-c).sign()
+		while true:
+			sidings[c]=true
+			if c==link[1]:break
+			c+=dir
+	for at in islands:
+		for y in range(2):
+			for x in range(2):
+				var c=at+Vector2i(x,y)
+				if not road.has(c) and not sidings.has(c):cover[c]=true
 	var finish=Vector2i(checkpoints[0].pos)
 	for y in range(g.H):
 		var row=[]
@@ -51,7 +78,7 @@ func build(index):
 	for y in range(1,g.H-1):
 		for x in range(1,g.W-1):
 			var c=Vector2i(x,y)
-			if not road.has(c):g.grid[y][x]=0 if x%4==0 or y%4==0 or (x+y+index)%5==0 else 2
+			if not road.has(c):g.grid[y][x]=1 if cover.has(c) else 0 if sidings.has(c) or x%4==0 or y%4==0 else 2
 	for i in range(route.size()):
 		var a=route[i];var b=route[(i+1)%route.size()];var dir=(b-a).sign()
 		for n in range(3,int(g.manhattan(a,b))-2,5):
@@ -64,9 +91,13 @@ func build(index):
 				if Vector2(x,y).distance_to(cp.pos)<1.6:g.grid[y][x]=0
 	for c in g.SPAWNS:
 		for d in [Vector2i.ZERO,Vector2i.LEFT,Vector2i.RIGHT]:g.grid[c.y+d.y][c.x+d.x]=0
-		g.grid[4][c.x]=2
-	stations=[route[1],route[-1]]
-	for c in stations:g.grid[c.y][c.x]=0
+		if not road.has(c+Vector2i(0,2)):g.grid[c.y+2][c.x]=2
+	for c in stations:
+		for d in [Vector2i.ZERO,Vector2i.LEFT,Vector2i.RIGHT,Vector2i.UP,Vector2i.DOWN]:
+			var bay=c+d
+			if g.inside(bay) and bay.x>0 and bay.x<g.W-1 and bay.y>0 and bay.y<g.H-1:
+				g.grid[bay.y][bay.x]=0;cover.erase(bay)
+				if not road.has(bay):sidings[bay]=true
 	g.crates.setup()
 func setup():
 	finish_order.clear();overtime=0;ship=null;parcels.clear();ship_wait=g.rng.randf_range(15,23)
@@ -153,7 +184,7 @@ func revive(p):
 	p.dead=false;p.car=false;p.mount=0;p.trap=0;p.freeze=0;p.slow=0;p.grace=2.5;p.down=0;p.item=0
 	g.teleport(p,chosen);p.race_before=p.visual;p.race_corner=-1
 func vehicle_velocity(p,dir,dt):
-	var maximum=(6.0 if road.has(p.cell) else 3.4)+p.speed*.12
+	var maximum=(6.0 if road.has(p.cell) else 5.2)+p.speed*.12
 	if p.slow>0:maximum*=.55
 	if p.dash>0:maximum*=1.18
 	if dir==Vector2.ZERO:return p.velocity.move_toward(Vector2.ZERO,dt*20)
@@ -235,8 +266,10 @@ func bot_actions(p,danger):
 	if g.bombs.size()>count:p.race_attack=3.0 if supplies or blocked else 8.0 if g.difficulty==1 else 5.0
 func draw_tile(c):
 	var theme=g.arena-FIRST_MAP;var pos=g.ORIGIN+Vector2(c)*g.TILE
-	var lane=road.has(c);var kind=0 if lane else 2 if g.grid[c.y][c.x]==1 else 1
+	var lane=road.has(c);var kind=0 if lane else 2 if g.grid[c.y][c.x]==1 and not cover.has(c) else 1
 	g.hd.sprite(GROUND,theme*3+kind,pos,Vector2.ONE*g.TILE,Color.WHITE,false)
+	if sidings.has(c) and not lane:
+		g.canvas.draw_line(pos+Vector2(4,8),pos+Vector2(12,8),Color(.85,.75,.52,.45),1)
 	# Thin edging follows every actual track edge, in all four directions.
 	if lane:
 		for d in g.DIRS:
@@ -254,14 +287,13 @@ func draw_ground():
 		var cp=checkpoints[i];var pos=g.ORIGIN+(cp.pos+Vector2.ONE*.5)*g.TILE
 		var side=Vector2(-cp.dir.y,cp.dir.x)
 		var next=viewer!=null and not viewer.race_finished and viewer.race_next==i
-		var passed=viewer!=null and viewer.race_flash>0 and posmod(viewer.race_next-1,checkpoints.size())==i
 		var color=Color("8bfff2") if next else Color("83c7d0")
-		if next or passed:
+		if next:
 			for ring in range(3):
 				var radius=11+ring*4+sin(g.elapsed*4)*1.5
-				g.canvas.draw_circle(pos,radius,Color(color,.07 if next else viewer.race_flash*.12))
-		g.canvas.draw_set_transform(pos,Vector2.UP.angle_to(cp.dir))
-		g.hd.sprite(CHECKPOINT,1 if next or passed else 0,Vector2(-18,-5),Vector2(36,10),Color.WHITE)
+				g.canvas.draw_circle(pos,radius,Color(color,.07))
+		g.canvas.draw_set_transform(pos+Vector2(sin(g.elapsed*83),cos(g.elapsed*71))*g.shake,Vector2.UP.angle_to(cp.dir))
+		g.hd.sprite(CHECKPOINT,1 if next else 0,Vector2(-18,-5),Vector2(36,10),Color.WHITE)
 		g.canvas.draw_set_transform(Vector2(sin(g.elapsed*83),cos(g.elapsed*71))*g.shake)
 		if i==0:g.hd.sprite(CHECKPOINT,3,pos-cp.dir*12-Vector2(8,8),Vector2(16,16))
 		for sign_value in [-1,1]:
