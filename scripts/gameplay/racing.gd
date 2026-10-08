@@ -17,7 +17,6 @@ var sidings={}
 var cover={}
 var station_timers={}
 var finish_order:Array=[]
-var overtime=0.0
 var views:Array=[]
 var view_team=-1
 var view_player=-1
@@ -100,7 +99,7 @@ func build(index):
 				if not road.has(bay):sidings[bay]=true
 	g.crates.setup()
 func setup():
-	finish_order.clear();overtime=0;ship=null;parcels.clear();ship_wait=g.rng.randf_range(15,23)
+	finish_order.clear();ship=null;parcels.clear();ship_wait=g.rng.randf_range(15,23)
 	for p in g.players:
 		p.car=false;p.race_lap=0;p.race_next=1;p.race_rank=0;p.race_points=0;p.race_finished=false;p.respawn=0.0
 		p.race_corner=-1;p.race_attack=0.0;p.race_flash=0.0;p.race_before=p.visual;p.race_checkpoint=p.visual;p.car_heading=Vector2.RIGHT
@@ -132,6 +131,7 @@ func airborne(dt):
 			g.drops[parcel.cell]=parcel.kind;g.burst(g.center(parcel.cell),Color("ffe3a8"),8)
 	parcels=parcels.filter(func(p):return p.time>0)
 func update(dt):
+	if g.clock_time<=0:finish();return
 	for c in stations:
 		station_timers[c]=station_timers.get(c,30.0)-dt
 		if station_timers[c]<=0:
@@ -154,20 +154,19 @@ func update(dt):
 			p.race_checkpoint=cp.pos+cp.dir
 			if p.race_next==0:
 				p.race_lap+=1
-				if p.race_lap>=laps or g.clock_time<=0:complete(p)
+				if p.race_lap>=laps:complete(p)
 			p.race_next=(p.race_next+1)%checkpoints.size()
 		p.race_before=p.visual
-	if g.clock_time<=0:overtime+=dt
-	# A stopped/absent player cannot keep the lobby waiting forever.
-	if finish_order.size()==g.players.size() or overtime>=60:
-		var totals={}
-		for p in g.players:totals[p.team]=totals.get(p.team,0)+p.race_points
-		var best=-1;var winners=[]
-		for team in totals:
-			if totals[team]>best:best=totals[team];winners=[team]
-			elif totals[team]==best:winners.append(team)
-		var winner=winners[0] if winners.size()==1 and best>0 else -1
-		g.finish_round(winner)
+	if finish_order.size()==g.players.size():finish()
+func finish():
+	var totals={}
+	for p in g.players:totals[p.team]=totals.get(p.team,0)+p.race_points
+	var best=-1;var winners=[]
+	for team in totals:
+		if totals[team]>best:best=totals[team];winners=[team]
+		elif totals[team]==best:winners.append(team)
+	var winner=winners[0] if winners.size()==1 and best>0 else -1
+	g.finish_round(winner)
 func complete(p):
 	if p.race_finished:return
 	p.race_finished=true;p.race_rank=finish_order.size()+1;p.race_points=9-p.race_rank
@@ -184,7 +183,8 @@ func revive(p):
 	p.dead=false;p.car=false;p.mount=0;p.trap=0;p.freeze=0;p.slow=0;p.grace=2.5;p.down=0;p.item=0
 	g.teleport(p,chosen);p.race_before=p.visual;p.race_corner=-1
 func vehicle_velocity(p,dir,dt):
-	var maximum=(6.0 if road.has(p.cell) else 5.2)+p.speed*.12
+	var on_road=road.has(p.cell)
+	var maximum=(6.0+p.speed*.12)*(1.0 if on_road else .42)
 	if p.slow>0:maximum*=.55
 	if p.dash>0:maximum*=1.18
 	if dir==Vector2.ZERO:return p.velocity.move_toward(Vector2.ZERO,dt*20)
@@ -192,8 +192,8 @@ func vehicle_velocity(p,dir,dt):
 	if p.velocity.dot(dir)<-.1:return p.velocity.move_toward(Vector2.ZERO,dt*28)
 	var forward=maxf(0,p.velocity.dot(dir))
 	var sideways=(p.velocity-dir*forward).move_toward(Vector2.ZERO,dt*32)
-	forward=move_toward(forward,maximum,dt*10)
-	var velocity=(dir*forward+sideways).limit_length(maximum)
+	forward=move_toward(forward,maximum,dt*(10 if on_road else 4.5))
+	var velocity=(dir*forward+sideways).limit_length(maxf(maximum,p.velocity.length()-dt*12))
 	p.car_heading=velocity.normalized() if velocity.length()>.1 else dir
 	return velocity
 func bot_direction(p,danger):
@@ -355,7 +355,7 @@ func sync_views():
 		views[i].canvas.queue_redraw()
 func draw_hud():
 	g.text_at(g.Catalog.MAPS[g.arena].name,Vector2(8,15),12,g.CREAM,260)
-	g.text_at(g.loc("剩余 %d 秒") % maxi(0,ceili(g.clock_time)) if g.clock_time>0 else "加时：下次过终点结束",Vector2(8,32),10,Color("ffe3a8"),300)
+	g.text_at(g.loc("剩余 %d 秒") % maxi(0,ceili(g.clock_time)),Vector2(8,32),10,Color("ffe3a8"),300)
 	g.panel(Vector2(451,43),Vector2(181,299),Color("62ceff"))
 	g.text_at("当前名次",Vector2(462,61),14,Color("ffe3a8"))
 	var list=ordered()

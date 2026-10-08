@@ -430,7 +430,7 @@ func new_round():
 			var pool=range(8).filter(func(index):return bot or character_unlocked(index))
 			character=pool[rng.randi_range(0,pool.size()-1)]
 		var c = round_spawns(count)[i]
-		var p = {"id":i,"control":control if not bot else -1,"team":team,"bot":bot,"character":character,"cell":c,"visual":Vector2(c),"from":Vector2(c),"move":1.0,"cool":0.0,"duration":0.15,"momentum":0.0,"velocity":Vector2.ZERO,"gait":0.0,"bubble_pass":Vector2i(-1,-1),"bubble_pass_cells":[],"push_cool":0.0,"drift":Vector2.ZERO,"motion_dir":Vector2i.ZERO,"starting":true,"pickup_lock":Vector2i(-1,-1),"range":1,"capacity":1,"speed":0,"damage_level":0,"riding":0,"item":0,"element":0,"element_time":0.0,"hurt":0.0,"placing":0.0,"down":0.0,"pop_time":0.0,"pop_row":0,"trapped_elapsed":0.0,"recoil":Vector2.ZERO,"torch":0.0,"shield":0.0,"dash":0.0,"kick":0.0,"cloak":0.0,"magnet":0.0,"freeze":0.0,"slow":0.0,"trap":0.0,"grace":0.0,"warp":0.0,"flow":0.0,"think":0.0,"attack":0.0,"ai_dir":Vector2i.ZERO,"facing":Vector2i.DOWN,"steps":0,"dead":false,"mount":0,"mount_hp":0,"jump":0.0,"coins":0,"last_cell":c,"score":0,"round_kills":0,"round_rescues":0,"round_monsters":0,"trap_owner":-1,"growth_loot":[],"reverse_time":0.0,"jump_travel":0.0,"jump_from":Vector2(c),"jump_to":Vector2(c),"push_cell":Vector2i(-1,-1),"push_dir":Vector2i.ZERO,"push_started":0.0,"push_last":-1.0}
+		var p = {"id":i,"control":control if not bot else -1,"team":team,"bot":bot,"character":character,"cell":c,"visual":Vector2(c),"from":Vector2(c),"move":1.0,"cool":0.0,"duration":0.15,"momentum":0.0,"velocity":Vector2.ZERO,"gait":0.0,"bubble_pass":Vector2i(-1,-1),"bubble_pass_cells":[],"push_cool":0.0,"drift":Vector2.ZERO,"motion_dir":Vector2i.ZERO,"starting":true,"pickup_lock":Vector2i(-1,-1),"range":1,"capacity":1,"speed":0,"damage_level":0,"riding":0,"item":0,"element":0,"element_time":0.0,"hurt":0.0,"placing":0.0,"down":0.0,"pop_time":0.0,"pop_row":0,"trapped_elapsed":0.0,"recoil":Vector2.ZERO,"torch":0.0,"shield":0.0,"dash":0.0,"kick":0.0,"cloak":0.0,"magnet":0.0,"freeze":0.0,"slow":0.0,"trap":0.0,"grace":0.0,"warp":0.0,"flow":0.0,"think":0.0,"attack":0.0,"ai_dir":Vector2i.ZERO,"facing":Vector2i.DOWN,"steps":0,"dead":false,"mount":0,"mount_hp":0,"rabbit_energy":8.0,"rabbit_rest":0.0,"jump":0.0,"coins":0,"last_cell":c,"score":0,"round_kills":0,"round_rescues":0,"round_monsters":0,"trap_owner":-1,"growth_loot":[],"reverse_time":0.0,"jump_travel":0.0,"jump_from":Vector2(c),"jump_to":Vector2(c),"push_cell":Vector2i(-1,-1),"push_dir":Vector2i.ZERO,"push_started":0.0,"push_last":-1.0}
 		var base=Catalog.CHARACTERS[character]
 		p.base_capacity=base.capacity;p.base_range=base.range;p.base_speed=base.speed
 		p.capacity=base.capacity;p.range=base.range;p.speed=base.speed
@@ -535,7 +535,7 @@ func build_board(index,playing=false):
 					18: wall = (sx%5==0 and sy%3!=1) or (sy%5==0 and sx%3==1)
 					19: wall = (sx in [6,14] and sy in [2,3,4,10,11,12]) or (sy in [5,9] and sx in [8,9,11,12])
 			var density=(.53 if arena%3 else .62)
-			if mode in [1,2]:density=[density,.30,.65,.82][battle_options.density]
+			if mode in [1,2]:density=[.72,.40,.78,.88][battle_options.density]
 			var cell = 1 if wall else (2 if map_rng.randf()<density else 0)
 			row.append(cell)
 		grid.append(row)
@@ -805,6 +805,8 @@ func update_game(dt):
 	update_camera(dt)
 	round_time+=dt
 	clock_time-=dt
+	if mode==1 and clock_time<=0:
+		clock_time=0;racing.update(0);return
 	weather.update(dt)
 	for effect in pickup_effects:effect.life-=dt
 	pickup_effects=pickup_effects.filter(func(effect):return effect.life>0)
@@ -825,12 +827,19 @@ func update_game(dt):
 	for p in players:
 		for timer in ["hurt","placing","down","pop_time","torch","shield","dash","kick","cloak","magnet","freeze","slow","grace","warp","flow","think","jump","attack","push_cool","reverse_time"]: p[timer]=maxf(0,p[timer]-dt)
 		p.cool=maxf(0,p.cool-dt)
+		if p.rabbit_rest>0:
+			p.rabbit_rest=maxf(0,p.rabbit_rest-dt)
+			if p.rabbit_rest<=0:p.rabbit_energy=8.0
 		if p.dead or (mode==1 and p.get("race_finished",false)):p.velocity=Vector2.ZERO;p.move=1;continue
 		if round_time-p.push_last>.10:p.push_cell=Vector2i(-1,-1)
 		if p.jump_travel>0 and p.trap<=0 and p.freeze<=0:
 			p.jump_travel=maxf(0,p.jump_travel-dt)
 			var progress=1-p.jump_travel/.42
+			var previous=p.visual
 			p.visual=p.jump_from.lerp(p.jump_to,smoothstep(0,1,progress));p.cell=Vector2i(p.visual.round());p.velocity=Vector2.ZERO
+			if p.mount==3:
+				p.rabbit_energy=maxf(0,p.rabbit_energy-previous.distance_to(p.visual))
+				if p.jump_travel<=0 and p.rabbit_energy<=0:p.rabbit_rest=1.0
 			if p.jump_travel<=0:p.visual=p.jump_to;p.cell=Vector2i(p.jump_to);world_fx.footstep(center(p.cell),p.facing,true)
 			continue
 		if p.cloak<=0 and grid[p.cell.y][p.cell.x]==2: eject_from_box(p)
@@ -909,18 +918,17 @@ func update_game(dt):
 			if team_coins[team]>=5:finish_round(team);break
 
 func move_duration(p):
-	var speed=.27-.012*p.speed
-	if p.dash>0:speed*=.66
-	if p.mount==1:speed*=.75
-	elif p.mount==2:speed*=1.1
-	elif p.mount==3:speed*=.86
-	if p.mount>0:speed*=1-.035*p.riding
+	var level=[2,0,5][p.mount-1] if p.mount>0 else p.speed
+	var speed=(.27-.012*level)/.7
+	if p.dash>0 and p.mount==0:speed*=.66
 	if p.freeze>0 or p.slow>0:speed*=1.9
 	if rule()=="gravity":speed*=.8
 	if terrain.has(p.cell) and terrain[p.cell].type=="sand":speed*=1.65
 	return maxf(.12,speed)
 
 func move_player(p,input_direction,dt):
+	if p.mount==3 and p.rabbit_rest>0:
+		p.velocity=Vector2.ZERO;p.move=1;return
 	var dir=Vector2(input_direction).limit_length(1)
 	if dir!=Vector2.ZERO:
 		p.facing=Vector2i(signf(dir.x),0) if absf(dir.x)>absf(dir.y) else Vector2i(0,signf(dir.y))
@@ -957,8 +965,12 @@ func move_player(p,input_direction,dt):
 		p.motion_dir=p.facing
 	var previous_step=int(p.gait*2)
 	p.gait+=travelled
+	if p.mount==3:
+		if travelled>.0001:p.rabbit_energy=maxf(0,p.rabbit_energy-travelled)
+		elif dir==Vector2.ZERO:p.rabbit_energy=minf(8,p.rabbit_energy+dt*8)
+		if p.rabbit_energy<=0:p.rabbit_rest=1.0;p.velocity=Vector2.ZERO;p.move=1
 	p.steps=int(p.gait)
-	p.move=0.0 if travelled>.0001 else 1.0
+	p.move=0.0 if travelled>.0001 and not (p.mount==3 and p.rabbit_rest>0) else 1.0
 	p.momentum=clampf(p.velocity.length()/speed,0,1)
 	if int(p.gait*2)>previous_step:world_fx.footstep(ORIGIN+p.visual*TILE+Vector2(8,13),p.facing,p.mount>0)
 	p.bubble_pass_cells=p.bubble_pass_cells.filter(func(c):return bomb_at(c)!=null and absf(p.visual.x-c.x)<=.76 and absf(p.visual.y-c.y)<=.76)
@@ -975,11 +987,11 @@ func movement_blocked(p,position,dir):
 	for y in range(low.y,high.y+1):
 		for x in range(low.x,high.x+1):
 			var c=Vector2i(x,y)
-			if not inside(c) or grid[y][x] in [1,3]:return true
+			if not inside(c) or grid[y][x]==3:return true
 			if not can_cross(p.cell,c):return true
-			if grid[y][x]==2 and p.cloak<=0:
-				if p.push_cool<=0 and dir!=Vector2i.ZERO and crates.try_push(c,dir,p):p.push_cool=.18
-				if grid[y][x]==2:
+			if grid[y][x]==1 or (grid[y][x]==2 and p.cloak<=0):
+				if grid[y][x]==2 and p.push_cool<=0 and dir!=Vector2i.ZERO and crates.try_push(c,dir,p):p.push_cool=.18
+				if grid[y][x] in [1,2]:
 					if p.mount==3 and p.jump<=0 and dir!=Vector2i.ZERO:
 						var landing=c+dir
 						if passable(landing,p) and (mode!=3 or camera_contains(Vector2(landing))):
@@ -1069,7 +1081,7 @@ func kill_player(p,killer=-1):
 	if not p.growth_loot.is_empty():death_loot.append({"origin":p.visual,"items":p.growth_loot.duplicate()});p.growth_loot.clear()
 	p.capacity=p.get("base_capacity",1);p.range=p.get("base_range",1);p.speed=p.get("base_speed",0);p.reverse_time=0;p.jump_travel=0;p.riding=0;p.damage_level=0
 	scatter_growth()
-	p.dead=true;p.trap=0;p.down=1.05;p.pop_time=.55;p.pop_row=0
+	p.dead=true;p.mount=0;p.mount_hp=0;p.trap=0;p.down=1.05;p.pop_time=.55;p.pop_row=0
 	if mode==1:p.respawn=10.0;p.car=false;p.mount=0
 	burst(center(p.cell),color_for(p),18)
 	if p.get("control",p.id)==0:stat("deaths")
@@ -1129,7 +1141,7 @@ func growth_full(p,kind):
 
 func bubble_fuse(p):return 3.4 if rule()=="gravity" else 2.3
 
-func mount_durability(p):return (2 if p.mount==2 else 1)+mini(2,p.riding)
+func mount_durability(p):return 2 if p.mount==2 else 1
 
 func pickup(p,c,manual=false):
 	if not drops.has(c):return
@@ -1142,7 +1154,7 @@ func pickup(p,c,manual=false):
 	if category=="active" and not manual and c!=p.cell and p.item!=0:return
 	var previous=p.item if category=="active" else 0
 	drops.erase(c)
-	if kind in [4,5,7,16,28,29,30]:p.growth_loot.append(kind)
+	if kind in [4,5,7,15,16,28,29,30]:p.growth_loot.append(kind)
 	if previous>0:
 		drops[c]=previous
 		p.pickup_lock=c
@@ -1161,10 +1173,11 @@ func pickup(p,c,manual=false):
 			p.damage_level=mini(3,p.damage_level+1)
 			announce(loc("泡泡伤害提升至 %d！") % (1+p.damage_level))
 		15:
-			p.mount=rng.randi_range(1,3)
-			p.mount_hp=mount_durability(p)
-			if p.get("control",p.id)==0:stat("mounts")
-			announce(Catalog.MOUNTS[p.mount].name+"陪你出战！")
+			if p.mount==0 and not p.get("car",false):
+				p.mount=rng.randi_range(1,3)
+				p.mount_hp=mount_durability(p);p.rabbit_energy=8;p.rabbit_rest=0
+				if p.get("control",p.id)==0:stat("mounts")
+				announce(Catalog.MOUNTS[p.mount].name+"陪你出战！")
 		16:
 			p.riding=mini(3,p.riding+1)
 			if p.mount>0:p.mount_hp=mini(mount_durability(p),p.mount_hp+1)
@@ -1449,7 +1462,9 @@ func flood_ring(ring):
 			collapsed_at[c]=round_time
 			burst(center(c),Color("ac9dc0"),5)
 			for p in players:
-				if p.cell==c:kill_player(p,-2)
+				if p.cell==c:
+					kill_player(p,-2);p.void_fall_at=elapsed
+	crates.prune()
 	announce("岛屿正在坍塌！向中央移动。")
 	shake=1.5
 	sound("splash")
@@ -1787,6 +1802,9 @@ func hero_sprite(pos,character,size,direction=0,pose=0,tint=Color.WHITE,seated=f
 			var phase=(walk_phase if walk_phase>=0 else (pose-4)*1.5) if pose in range(4,12) else 0.0
 			var frames=int(hd.regions[name].size()/4)
 			index=direction*frames+posmod(int(phase*frames/12.0),frames);source=hd.region(name,index)
+			if direction in [2,3]:
+				name="characters/walk/side-walk-v497.png";frames=int(hd.regions[name].size()/8)
+				index=character*frames+posmod(int(phase*frames/12.0),frames);source=hd.region(name,index)
 	if direction==0 and not seated and (pose in range(12,16) or pose in range(20,24)):
 		name="characters/actions/hero-actions-hd.png"
 		var action=mini(2,pose-12)+4 if pose<16 else pose-20
@@ -1798,8 +1816,13 @@ func hero_sprite(pos,character,size,direction=0,pose=0,tint=Color.WHITE,seated=f
 	var baseline=source.size
 	if name.begins_with("characters/walk/"):
 		baseline=hd.animation_baseline(name)
+	if name=="characters/walk/side-walk-v497.png":baseline=Vector2(hd.regions[name][index][6][0],hd.regions[name][index][6][1])
 	var drawn=source.size*minf(size.x/baseline.x,size.y/baseline.y)
 	var at=pos+Vector2((size.x-drawn.x)/2,size.y-drawn.y)
+	if name=="characters/walk/side-walk-v497.png":
+		var pivot_x=float(hd.regions[name][index][5])*drawn.x/source.size.x
+		at.x=pos.x+size.x*.5-(drawn.x-pivot_x if direction==3 else pivot_x)
+	var destination=Rect2(at+Vector2(drawn.x,0),Vector2(-drawn.x,drawn.y)) if name=="characters/walk/side-walk-v497.png" and direction==3 else Rect2(at,drawn)
 	var hurt=pose in range(12,16)
 	var trapped=pose in range(16,20)
 	var placing=pose>=20
@@ -1808,8 +1831,9 @@ func hero_sprite(pos,character,size,direction=0,pose=0,tint=Color.WHITE,seated=f
 	if angle!=0:
 		canvas.draw_set_transform(pivot+Vector2(sin(elapsed*83),cos(elapsed*71))*shake,angle)
 		at-=pivot
-	if palette_id>=0:canvas.draw_texture_rect(hero_palette.texture_for(palette_id,false,hd.textures[name],source,.64 if seated else 1.0,hd.regions[name][index][4] if hd.regions[name][index].size()>4 else []),Rect2(at,drawn),false,tint)
-	else:hd.draw_region(name,index,Rect2(at,drawn),tint)
+		destination=Rect2(at,drawn)
+	if palette_id>=0:canvas.draw_texture_rect(hero_palette.texture_for(palette_id,false,hd.textures[name],source,.64 if seated else 1.0,hd.regions[name][index][4] if hd.regions[name][index].size()>4 else []),destination,false,tint)
+	else:hd.draw_region(name,index,destination,tint)
 	if angle!=0:canvas.draw_set_transform(Vector2(sin(elapsed*83),cos(elapsed*71))*shake)
 
 func portrait(pos,character,size=Vector2(20,24),frame=0):
@@ -1867,7 +1891,7 @@ func draw_tile(c):
 	# Opaque theme ground under transparent tile-edge pixels avoids cracks.
 	rect(pos,Vector2(TILE,TILE),Color(HDArt.FLOOR_COLORS[theme]))
 	if cell==3:
-		rect(pos,Vector2(TILE,TILE),Color("101524"))
+		world_fx.draw_void(c,pos)
 		var age=round_time-collapsed_at.get(c,round_time-1)
 		if age<.55:
 			var inset=age*9
@@ -2007,14 +2031,18 @@ func draw_splash(f):
 
 func draw_actor(pos,p):
 	if concealed(p):return
-	if state=="finale" and (not p.dead or (result_winner>=0 and p.team==result_winner)):
+	if state=="finale" and (not p.dead or (result_winner>=0 and p.team==result_winner and grid[p.cell.y][p.cell.x]!=3)):
 		draw_finale_actor(pos,p);return
 	if p.dead:
+		var falling=inside(p.cell) and grid[p.cell.y][p.cell.x]==3
+		var fall=clampf((elapsed-p.get("void_fall_at",elapsed))/.85,0,1) if falling else 0.0
+		if falling and fall>=1:return
 		var death_phase=clampi(int((1.05-p.down)/.35),0,2)
 		var size=Vector2(20,25) if death_phase==0 else Vector2(27,18) if death_phase==1 else Vector2(29,12)
 		var source=hd.region("characters/actions/hero-death-v5.png",death_phase*8+p.character)
 		var drawn=source.size*minf(size.x/source.size.x,size.y/source.size.y)
-		canvas.draw_texture_rect(hero_palette.texture_for(p.id,false,hd.textures["characters/actions/hero-death-v5.png"],source),Rect2(pos+Vector2(-drawn.x/2,5-drawn.y),drawn),false)
+		drawn*=1-fall*.8
+		canvas.draw_texture_rect(hero_palette.texture_for(p.id,false,hd.textures["characters/actions/hero-death-v5.png"],source),Rect2(pos+Vector2(-drawn.x/2,5-drawn.y+fall*fall*18),drawn),false,Color(1,1,1,.48*(1-fall)))
 		draw_bubble_break(pos,p)
 		return
 	if mode==1 and p.get("car",false):racing.draw_car(pos,p,Color.WHITE);return
@@ -2041,7 +2069,14 @@ func draw_actor(pos,p):
 		var mount_frame=int(p.gait*2)%4 if walking else 0
 		hd.riding_sprite(pos+Vector2(0,bob),p,p.mount,direction,mount_frame,tint)
 		health_bar(pos+Vector2(-6,14),p.mount_hp,mount_durability(p),12,2)
-	else:hero_sprite(pos+Vector2(-11,-20+bob),p.character,Vector2(22,25),direction,pose,tint,false,p.gait*6,p.id)
+		if p.mount==3:
+			var energy=1-p.rabbit_rest if p.rabbit_rest>0 else p.rabbit_energy/8.0
+			rect(pos+Vector2(-9,17),Vector2(18,2.5),Color(.04,.12,.2,.4))
+			rect(pos+Vector2(-9,17),Vector2(18*energy,2.5),Color("64caff"))
+			if p.rabbit_rest>0:
+				var at=pos+Vector2(10,-17-sin(elapsed*4))
+				canvas.draw_circle(at,1.2,Color("9de5ff"));canvas.draw_line(at-Vector2(0,2),at,Color("9de5ff"),1)
+	else:hero_sprite(pos+Vector2(-11,-20+bob),p.character,Vector2(22,25),direction,pose,tint,false,p.gait*4,p.id)
 	if p.hurt>0:
 		var hit=1-p.hurt/.48
 		for n in range(5):

@@ -39,6 +39,7 @@ func theme_name(theme):return "maps/decorations/theme-"+g.Catalog.THEMES[theme]+
 func theme_sprite(theme,index,pos,size,tint=Color.WHITE,fit=true):
 	if index in range(2,8):
 		var block_tint=tint*Color(WALL_TINTS[theme]) if index==2 else tint
+		g.rect(pos,size,Color("666775")*block_tint if index==2 else Color("72503a") if index in [3,4] else Color("444b60") if index==5 else Color("735936"))
 		sprite("maps/blocks/blocks-depth-v463.png",index,pos,size,block_tint,false)
 		return
 	var name="maps/floors/playfield-"+g.Catalog.THEMES[theme]+"-hd.png"
@@ -86,5 +87,6 @@ func riding_sprite(pos,p,kind,direction,frame,tint=Color.WHITE):
 	var source=region(name,direction*4+posmod(frame,4));var baseline=animation_baseline(name)
 	var size=Vector2(32,36) if kind!=4 else Vector2(30,29)
 	var drawn=source.size*minf(size.x/baseline.x,size.y/baseline.y)
+	if kind==3 and p.rabbit_rest>0:drawn*=Vector2(1+sin(g.elapsed*5)*.018,1-absf(sin(g.elapsed*5))*.035)
 	g.canvas.draw_texture_rect(g.hero_palette.texture_for(p.id,false,textures[name],source,1.0,[],true),Rect2(pos+Vector2(-drawn.x*.5,6-drawn.y),drawn),false,tint)
 	return true

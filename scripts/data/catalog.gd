@@ -67,7 +67,7 @@ const ITEMS = [
 	{"name":"诱饵娃娃", "kind":"active", "tip":"放置假角色吸引敌方 Bot。", "color":"ffafd0"},
 	{"name":"吸宝磁铁", "kind":"active", "tip":"五秒内吸取两格内的道具。", "color":"ff9494"},
 	{"name":"坐骑蛋", "kind":"mount", "tip":"孵化鸭、龟或兔；坐骑能挡水柱。", "color":"baffcb"},
-	{"name":"骑术成长", "kind":"growth", "tip":"骑术最多三级，每级提升坐骑速度；前两级各增加一点耐久。", "color":"ffc47b"},
+	{"name":"骑术成长", "kind":"growth", "tip":"骑术最多三级，拾取时修复当前坐骑一点耐久，不改变固定速度和血量上限。", "color":"ffc47b"},
 	{"name":"换位星", "kind":"active", "tip":"与六格内最近的普通敌人交换位置，不能移动 Boss。", "color":"dcadff"},
 	{"name":"队友急救", "kind":"active", "tip":"救出三格内被困的队友和自己。", "color":"ffd2d2"},
 	{"name":"星币", "kind":"treasure", "tip":"藏宝城收集五枚即可获胜。", "color":"ffe68a"},
@@ -96,7 +96,7 @@ const CHARACTERS = [
 ]
 const MOUNTS = [
 	{"name":"无坐骑", "tip":"寻找坐骑蛋。", "color":"ffffff"},
-	{"name":"泡泡鸭", "tip":"跑得快，能挡一次水柱。", "color":"ffe080"},
-	{"name":"甲壳龟", "tip":"跑得稍慢，能挡两次水柱。", "color":"9be8a1"},
-	{"name":"跳跳兔", "tip":"撞箱子可跳过，能挡一次水柱。", "color":"f7c4e7"}
+	{"name":"泡泡鸭", "tip":"速度固定二级，一格耐久；已有坐骑时重复拾取不会替换，死亡全部掉落。", "color":"ffe080"},
+	{"name":"甲壳龟", "tip":"速度固定最低级，两格耐久，可承受两次水柱。", "color":"9be8a1"},
+	{"name":"跳跳兔", "tip":"速度固定最高级，一格耐久；可跳过单格障碍，跑八格后休息一秒，蓝条显示耐力。", "color":"f7c4e7"}
 ]

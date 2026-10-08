@@ -3,7 +3,29 @@ var g
 var events:Array=[]
 var links:Array=[]
 var footsteps:Array=[]
-func _init(game):g=game
+var void_fog:NoiseTexture2D
+func _init(game):
+	g=game
+	void_fog=NoiseTexture2D.new();void_fog.width=512;void_fog.height=512;void_fog.seamless=true
+	var noise=FastNoiseLite.new();noise.seed=497;noise.frequency=.035;noise.fractal_octaves=3
+	void_fog.noise=noise
+	var ramp=Gradient.new();ramp.colors=PackedColorArray([Color("0b1022"),Color("41346b"),Color("8871b6")]);ramp.offsets=PackedFloat32Array([0,.55,1])
+	void_fog.color_ramp=ramp
+func draw_void(c,pos):
+	g.rect(pos,Vector2.ONE*g.TILE,Color("111027"))
+	var source=Vector2(fposmod(c.x*g.TILE+g.elapsed*4,496),fposmod(c.y*g.TILE-g.elapsed*3,496))
+	g.canvas.draw_texture_rect_region(void_fog,Rect2(pos,Vector2.ONE*g.TILE),Rect2(source,Vector2.ONE*g.TILE),Color(1,1,1,.85))
+	for d in g.DIRS:
+		var next=c+d
+		if not g.inside(next) or g.grid[next.y][next.x]==3:continue
+		var along=Vector2(-d.y,d.x)
+		var edge=pos+Vector2.ONE*8+Vector2(d)*7.5
+		g.canvas.draw_line(edge-along*8,edge+along*8,Color(.57,.41,.86,.55+.18*sin(g.elapsed*3+c.x)),1.5)
+		var phase=fposmod(g.elapsed*1.6+(c.x*7+c.y*11)*.17,4)
+		if phase<.3:
+			var points=PackedVector2Array([edge-along*8,edge-along*4-Vector2(d)*2,edge-along+Vector2(d),edge+along*3-Vector2(d)*2,edge+along*8])
+			g.canvas.draw_polyline(points,Color(.62,.4,1,(1-phase/.3)*.8),2.5)
+			g.canvas.draw_polyline(points,Color(.87,.86,1,1-phase/.3),.7)
 func impact(pos,kind=0,size=30):
 	events.append({"pos":pos,"kind":kind,"life":.48,"size":size})
 	if events.size()>90:events.pop_front()
@@ -58,8 +80,9 @@ func design_reserved(c,pve,allow_crate=false):
 	return false
 func add_permanent_cover(pve):
 	# Short piers and paired pillars remain useful after the crates are destroyed.
-	for y in range(4,g.H-4,6):
-		for x in range(4+(3 if (y/6)%2 else 0),g.W-4,6):
+	var spacing=4 if not pve and g.mode==2 else 6
+	for y in range(4,g.H-4,spacing):
+		for x in range(4+(2 if (y/spacing)%2 else 0),g.W-4,spacing):
 			var cells=[Vector2i(x,y),Vector2i(x,y)+(Vector2i.RIGHT if (g.arena+x+y)%2 else Vector2i.DOWN)]
 			if not pve:
 				for c in cells.duplicate():
@@ -215,4 +238,4 @@ func draw_shelter(c):
 	g.canvas.draw_set_transform(pos+Vector2(0,6)+shake,0,Vector2(1,.28))
 	g.canvas.draw_circle(Vector2.ZERO,10,Color(.05,.09,.12,.24))
 	g.canvas.draw_set_transform(shake)
-	g.hd.sprite("maps/decorations/shelters-v480.png",art,pos+Vector2(-size.x*.5,8-size.y),size,tint)
+	g.hd.sprite("maps/decorations/shelters-front-v497.png" if art>=5 else "maps/decorations/shelters-v480.png",art-5 if art>=5 else art,pos+Vector2(-size.x*.5,8-size.y),size,tint)

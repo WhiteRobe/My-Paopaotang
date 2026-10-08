@@ -108,5 +108,7 @@ from index_racing import index
 regions=index(regions)
 from index_riding import index as index_riding
 regions=index_riding(regions)
+from index_v497 import index as index_v497
+regions=index_v497(regions)
 (R/'atlas-regions.json').write_text(json.dumps(regions,ensure_ascii=False,indent=2)+'\n')
 print(json.dumps(report,ensure_ascii=False,indent=2))

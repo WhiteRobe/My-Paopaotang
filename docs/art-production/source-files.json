@@ -450,5 +450,20 @@
     "name": "race-v490",
     "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-ab539ee8-be0c-430f-9369-c64416668f5e.png",
     "resource": "assets/art/maps/racing/race-v490.png"
+  },
+  {
+    "name": "shelters-front-v497",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-5dd49eeb-8230-4f03-ae67-6b69864bdf2f.png",
+    "resource": "assets/art/maps/decorations/shelters-front-v497.png"
+  },
+  {
+    "name": "blocks-orthographic-v497",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-682b7f7e-bc9b-46ff-89e6-0c3da8fb3678.png",
+    "resource": "assets/art/maps/blocks/blocks-depth-v463.png"
+  },
+  {
+    "name": "side-walk-v497",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-3c1bf06e-cc1d-4c5f-8e98-3947b528faec.png",
+    "resource": "assets/art/characters/walk/side-walk-v497.png"
   }
 ]
