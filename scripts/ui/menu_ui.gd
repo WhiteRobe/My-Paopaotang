@@ -2,9 +2,9 @@ extends RefCounted
 
 # Frontend pages share the same match configuration and save data as the game.
 const PAGES=["menu","modes","lobby","settings","saves","save_confirm","about","seat","advanced"]
-const TITLES=["单人闯关","自由混战","组队对战","剧情冒险 PVE"]
-const DESCRIPTIONS=["挑战二十关经典竞技地图，击败电脑对手，解锁新角色。","二至八个席位各自为战，真人与电脑混合，先赢两局夺冠。","四至八人分成两队，救援队友、配合泡泡连锁，先赢两局夺冠。","五章故事、二十个任务。和伙伴营救居民、护送车辆、挑战首领。"]
-const BADGES=["1 位真人 · 20 关","1–4 位真人 · 2–8 席位","1–4 位真人 · 4–8 席位","1–4 位真人 · 5 章故事"]
+const TITLES=["单人闯关","赛车竞速","组队对战","剧情冒险 PVE"]
+const DESCRIPTIONS=["挑战二十关经典竞技地图，击败电脑对手，解锁新角色。","驾驶赛车依次通过检查点，默认三圈，按冲线顺序为个人或队伍计分。","二至八个席位自由分成最多八队，每人一队即混战，先赢两局夺冠。","五章故事、二十个任务。和伙伴营救居民、护送车辆、挑战首领。"]
+const BADGES=["1 位真人 · 20 关","1–4 位真人 · 2–8 席位","1–4 位真人 · 2–8 席位","1–4 位真人 · 5 章故事"]
 const HUB=["选择游戏模式","继续上次模式","设置与音量","快捷键与操作","存档管理","全图鉴","局外统计","制作与版本"]
 const SAVE_ACTIONS=["立即保存","创建备份","恢复备份","重置游戏进度","打开存档目录"]
 var g
@@ -37,7 +37,7 @@ func enter_lobby(which):
 	history.clear()
 	g.mode=which;mode_focus=which;row=0
 	if which==0:g.humans=1
-	if which==2:g.seats=clampi(g.seats/2*2,4,8)
+	if which in [1,2]:g.seats=clampi(g.seats,2,8);g.team_count=mini(g.team_count,g.seats)
 	if which==3:g.seats=4
 	g.humans=g.lobby_roles().filter(func(value):return value).size()
 	g.character_slot=mini(g.character_slot,g.humans-1)
@@ -53,12 +53,12 @@ func hub_action(index):
 		6:open_page("stats")
 		7:open_page("about")
 		8:g.close_game()
-func row_rect(index):return Rect2(25,86+index*29,260,25)
+func row_rect(index):return Rect2(25,(79+index*24) if g.mode==1 else (86+index*29),260,22 if g.mode==1 else 25)
 func start_rect():return Rect2(25,298,260,30)
 func slot_rect(index):return Rect2(309+(index%4)*74,241+(index/4)*42,69,37)
 func rows():
 	if g.mode==0:return ["stage","companion","difficulty","characters","start"]
-	if g.mode==1:return ["map","humans","seats","difficulty","characters","start"]
+	if g.mode==1:return ["race_map","humans","seats","teams","laps","race_time","difficulty","characters","start"]
 	if g.mode==2:return ["map","humans","seats","teams","difficulty","characters","start"]
 	return ["stage","humans","companion","difficulty","characters","start"]
 func adjust(direction):
@@ -67,11 +67,14 @@ func adjust(direction):
 		"stage":
 			if g.mode==0:g.campaign_stage=clampi(g.campaign_stage+direction,1,mini(20,int(g.profile.cleared)+1))
 			else:g.adventure_stage=clampi(g.adventure_stage+direction,1,mini(20,int(g.profile.adventure_cleared)+1))
-		"map":g.selected_map=posmod(g.selected_map+1+direction,g.MAP_COUNT+1)-1
+		"map":g.selected_map=posmod(g.selected_map+1+direction,45)-1
 		"humans":
 			g.humans=clampi(g.humans+direction,1,mini(4,g.seats));g.seat_roles.fill(-1)
-		"seats":g.seats=clampi(g.seats+direction*(2 if g.mode==2 else 1),4 if g.mode==2 else 2,8);g.humans=mini(g.humans,g.seats)
-		"teams":g.team_layout=1-g.team_layout;g.seat_teams.fill(-1)
+		"seats":g.seats=clampi(g.seats+direction,2,8);g.humans=mini(g.humans,g.seats);g.team_count=mini(g.team_count,g.seats)
+		"teams":g.team_count=clampi(g.team_count+direction,2,g.seats);g.seat_teams.fill(-1)
+		"race_map":g.racing.selected=posmod(g.racing.selected+direction,3)
+		"laps":g.racing.laps=clampi(g.racing.laps+direction,1,9)
+		"race_time":g.racing.time_limit=clampi(g.racing.time_limit+direction*30,60,600)
 		"companion":g.companion=not g.companion
 		"difficulty":g.difficulty=posmod(g.difficulty+direction,3)
 		"characters":g.character_slot=posmod(g.character_slot+direction,g.lobby_count())
@@ -119,15 +122,15 @@ func input_key(key):
 			if key in [KEY_UP,KEY_DOWN]:focus=posmod(focus+(-1 if key==KEY_UP else 1),8)
 			elif key in [KEY_LEFT,KEY_RIGHT,KEY_ENTER,KEY_SPACE]:adjust_advanced(-1 if key==KEY_LEFT else 1)
 		"lobby":
-			if key==KEY_A and g.mode in [1,2]:open_page("advanced")
+			if key==KEY_A and g.mode==2:open_page("advanced")
 			elif key==KEY_UP:row=posmod(row-1,rows().size())
 			elif key==KEY_DOWN:row=posmod(row+1,rows().size())
 			elif key in [KEY_LEFT,KEY_RIGHT]:adjust(-1 if key==KEY_LEFT else 1)
 			elif key==KEY_ENTER:activate_row()
 			elif key==KEY_SPACE:activate_row()
 			elif key==KEY_C:open_page("characters")
-			elif key==KEY_V and g.mode in [1,2]:open_page("maps")
-			elif key==KEY_R and g.mode in [1,2]:g.selected_map=-1;g.refresh_preview();g.save_profile()
+			elif key==KEY_V and g.mode==2:open_page("maps")
+			elif key==KEY_R and g.mode==2:g.selected_map=-1;g.refresh_preview();g.save_profile()
 		"settings":
 			if key in [KEY_UP,KEY_DOWN]:focus=posmod(focus+(-1 if key==KEY_UP else 1),6)
 			elif key in [KEY_LEFT,KEY_RIGHT]:settings_action(-1 if key==KEY_LEFT else 1)
@@ -154,7 +157,7 @@ func input_mouse(pos):
 			for i in range(8):
 				if Rect2(35,69+i*31,570,27).has_point(pos):focus=i;adjust_advanced(-1 if pos.x<340 else 1);return
 		"lobby":
-			if g.mode in [1,2] and Rect2(25,271,260,22).has_point(pos):open_page("advanced");return
+			if g.mode==2 and Rect2(25,271,260,22).has_point(pos):open_page("advanced");return
 			if start_rect().has_point(pos):g.start_match();return
 			for i in range(rows().size()-1):
 				if row_rect(i).has_point(pos):
@@ -164,7 +167,7 @@ func input_mouse(pos):
 					return
 			for i in range(8):
 				if i<g.lobby_count() and slot_rect(i).has_point(pos):seat_slot=i;seat_row=0;g.character_slot=i;open_page("seat");return
-			if Rect2(309,210,292,24).has_point(pos) and g.mode in [1,2]:open_page("maps")
+			if Rect2(309,210,292,24).has_point(pos) and g.mode==2:open_page("maps")
 		"seat":
 			for i in range(4):
 				if Rect2(40,100+i*45,280,35).has_point(pos):
@@ -245,7 +248,7 @@ func draw_hub():
 		g.canvas.draw_arc(at,28+n%3*10,3.4,4.5,28,Color(.56,.87,.92,.12),1)
 	g.text_at("泡泡糖",Vector2(36,60),36,Color("a4efff"),315)
 	g.text_at("像素群岛大冒险",Vector2(38,87),16,Color("bfd2da"),315)
-	g.text_at("44 张地图 · 最多 8 人对战",Vector2(38,111),12,Color("7fafbf"),315)
+	g.text_at("47 张地图 · 最多 8 队对战",Vector2(38,111),12,Color("7fafbf"),315)
 	for i in range(8):
 		var r=hub_rect(i);card(r.position,r.size,focus==i)
 		g.text_at(HUB[i],r.position+Vector2(12,27 if i<2 else 21),16 if i<2 else 12,Color("ffe3a8") if focus==i else g.CREAM,r.size.x-24)
@@ -273,17 +276,20 @@ func value(field):
 		"map":return g.loc("随机地图") if g.selected_map<0 else g.loc(g.Catalog.MAPS[g.selected_map].name)
 		"humans":return g.loc("%d 位真人") % g.humans
 		"seats":return g.loc("%d 个席位，电脑补齐") % g.seats
-		"teams":return g.loc("连续席位一队") if g.team_layout==0 else g.loc("交叉对抗")
+		"teams":return (g.loc("%d 支队伍") % g.team_count)+(" · "+g.loc("混战") if g.team_count==g.seats else "")
+		"race_map":return g.Catalog.MAPS[44+g.racing.selected].name
+		"laps":return g.loc("%d 圈") % g.racing.laps
+		"race_time":return g.loc("%d 秒") % g.racing.time_limit
 		"companion":return g.loc("开启") if g.companion else g.loc("关闭")
 		"characters":return g.loc("玩家 %d · %s") % [g.character_slot+1,g.loc(g.character_name(g.slot_character(g.character_slot)))]
 	return ""
 func draw_lobby():
 	heading(TITLES[g.mode],"模式大厅 · 配置完成后开始游戏")
 	g.text_at(DESCRIPTIONS[g.mode],Vector2(25,73),9,Color("a7cbd8"),260)
-	var labels={"difficulty":"AI 难度","stage":"当前关卡","map":"对战地图","humans":"真人人数","seats":"总席位","teams":"分队方式","companion":"电脑队友","characters":"角色选择"}
+	var labels={"difficulty":"AI 难度","stage":"当前关卡","map":"对战地图","humans":"真人人数","seats":"总席位","teams":"分队方式","companion":"电脑队友","characters":"角色选择","race_map":"赛车地图","laps":"目标圈数","race_time":"比赛时间"}
 	for i in range(rows().size()-1):
 		var field=rows()[i];var pos=row_rect(i).position
-		card(pos,Vector2(260,25),row==i)
+		card(pos,row_rect(i).size,row==i)
 		g.text_at(labels[field],pos+Vector2(10,17),12,Color("a1c6d6"),78)
 		g.text_at(value(field),pos+Vector2(94,17),12,g.CREAM,150)
 	if g.mode==3:
@@ -293,15 +299,16 @@ func draw_lobby():
 	elif g.mode==0:
 		g.text_at("第五关起可带电脑队友",Vector2(25,244),12,Color("b4ddc2"),260)
 		g.text_at("电脑对手造型随关卡变化",Vector2(25,265),12,Color("a7c9d5"),260)
-	else:
+	elif g.mode==2:
 		g.button(Vector2(25,271),Vector2(260,22),"高级规则 A")
 	g.button(start_rect().position,start_rect().size,"开始游戏",rows()[row]=="start")
 	card(Vector2(309,68),Vector2(292,137))
-	g.text_at("随机地图 · 开局揭晓" if g.selected_map<0 and g.mode in [1,2] else g.Catalog.MAPS[g.arena].name,Vector2(322,88),12,Color("ffe3a8"),272)
-	g.mini_board(Vector2(391,91),4.7)
+	g.text_at("随机地图 · 开局揭晓" if g.selected_map<0 and g.mode==2 else g.Catalog.MAPS[g.arena].name,Vector2(322,88),12,Color("ffe3a8"),272)
+	g.mini_board(Vector2(391,91) if g.mode!=1 else Vector2(374,93),minf(4.7,minf(210.0/g.W,92.0/g.H)))
 	var seconds=g.match_seconds(g.arena)
-	g.text_at(g.loc("倒计时 %d 秒 · 到时逐圈坍塌") % seconds,Vector2(322,199),12,Color("a2c9d3"),270)
-	if g.mode in [1,2]:g.button(Vector2(309,210),Vector2(292,24),"浏览地图 V · R 随机")
+	g.text_at((g.loc("%d 圈 · %d 秒 · 分屏竞速") % [g.racing.laps,seconds]) if g.mode==1 else g.loc("倒计时 %d 秒 · 到时逐圈坍塌") % seconds,Vector2(322,199),12,Color("a2c9d3"),270)
+	if g.mode==2:g.button(Vector2(309,210),Vector2(292,24),"浏览地图 V · R 随机")
+	elif g.mode==1:g.text_at("阵亡十秒复活 · 赛车检查点",Vector2(322,226),10,g.CREAM,270)
 	else:g.text_at(g.loc("已通关 %d / 20 · 左右切换已解锁关卡") % int(g.profile.adventure_cleared if g.mode==3 else g.profile.cleared),Vector2(322,221),12,Color("9cd0bd"),292)
 	var count=g.lobby_count()
 	var roles=g.lobby_roles()
@@ -310,7 +317,7 @@ func draw_lobby():
 		var r=slot_rect(i);card(r.position,r.size,i==g.character_slot)
 		var character=g.slot_character(i)
 		g.face_portrait(r.position+Vector2(4,3),character,Vector2(20,21),i)
-		g.text_at(("P" if roles[i] else "B")+str(i+1),r.position+Vector2(28,13),9,g.COLORS[(0 if team==0 else 1) if g.mode==2 else team%8],36)
+		g.text_at(("P" if roles[i] else "B")+str(i+1),r.position+Vector2(28,13),9,g.COLORS[team%8],36)
 		g.text_at(g.loc("真人") if roles[i] else g.loc("电脑"),r.position+Vector2(27,27),8,Color("9eb8c6"),37)
 	if message!="":g.text_at(message,Vector2(25,289),9,Color("ffb493"),260)
 	g.centered("↑↓ 选择 · ←→ 调整 · 回车确认 · C 选角色 · ESC 返回",346,12)
@@ -332,12 +339,12 @@ func adjust_seat(direction):
 		for i in range(9):
 			value=posmod(value+direction,9)
 			if g.character_selectable(value):g.select_slot_character(value);break
-	elif seat_row==2 and g.mode==2:g.seat_teams[seat_slot]=1-g.slot_team(seat_slot)
+	elif seat_row==2 and g.mode in [1,2]:g.seat_teams[seat_slot]=posmod(g.slot_team(seat_slot)+direction,g.team_count)
 	g.save_profile()
 func draw_seat():
 	heading("席位设置",g.loc("席位 %d") % (seat_slot+1))
 	var roles=g.lobby_roles()
-	var values=[g.loc("真人") if roles[seat_slot] else g.loc("电脑"),g.loc(g.character_name(g.slot_character(seat_slot))),g.loc("队伍 %d") % (g.slot_team(seat_slot)+1) if g.mode==2 else g.loc("同队") if g.mode==3 else g.loc("固定分队"),g.loc("返回大厅")]
+	var values=[g.loc("真人") if roles[seat_slot] else g.loc("电脑"),g.loc(g.character_name(g.slot_character(seat_slot))),g.loc("队伍 %d") % (g.slot_team(seat_slot)+1) if g.mode in [1,2] else g.loc("同队") if g.mode==3 else g.loc("固定分队"),g.loc("返回大厅")]
 	var labels=["控制方式","角色选择","所属队伍","完成设置"]
 	for i in range(4):
 		var pos=Vector2(40,100+i*45);card(pos,Vector2(280,35),i==seat_row)
@@ -436,7 +443,7 @@ func draw_confirmation():
 	g.button(Vector2(145,243),Vector2(155,32),"取消",confirmation==0)
 	g.button(Vector2(335,243),Vector2(155,32),"确认恢复" if pending=="restore" else "备份并重置",confirmation==1)
 func draw_about():
-	heading("制作与版本","泡泡糖 · 像素群岛大冒险 · v4.8.0")
+	heading("制作与版本","泡泡糖 · 像素群岛大冒险 · v4.9.0")
 	card(Vector2(55,77),Vector2(530,237))
 	g.hero_sprite(Vector2(75,119),7,Vector2(110,145),0,0)
 	g.text_at("像素群岛，等你来冒险",Vector2(220,112),24,Color("ffe3ac"),340)

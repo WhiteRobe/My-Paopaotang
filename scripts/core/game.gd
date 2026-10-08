@@ -13,7 +13,10 @@ const MapMechanisms=preload("res://scripts/gameplay/map_mechanisms.gd")
 const BubbleEffects=preload("res://scripts/gameplay/bubble_effects.gd")
 const Crates=preload("res://scripts/gameplay/crates.gd")
 const WorldEffects=preload("res://scripts/render/world_effects.gd")
-const MAP_COUNT=44
+const MAP_COUNT=47
+const Racing=preload("res://scripts/gameplay/racing.gd")
+var racing
+var team_count=2
 var W = 27
 var H = 19
 const VIEW_SIZE=Vector2(27,19)
@@ -37,7 +40,7 @@ const ITEM_KEYS = [KEY_Q,KEY_SLASH,KEY_O,KEY_Y]
 const PICKUP_KEYS=[KEY_E,KEY_PERIOD,KEY_SEMICOLON,KEY_V]
 const PICKUP_LABELS=["E",".",";","V"]
 const CONTROL_NAMES = ["WASD / 空格 / Q","方向键 / 回车 / /","IJKL / U / O","TFGH / R / Y"]
-const MODES = ["单人闯关","自由混战","组队对战","剧情冒险 PVE"]
+const MODES = ["单人闯关","赛车竞速","组队对战","剧情冒险 PVE"]
 const UI_FONT=preload("res://assets/fonts/ui_font.tres")
 const ZH_FONT=preload("res://assets/fonts/ui_font_zh.tres")
 var font=UI_FONT
@@ -131,7 +134,7 @@ var save_path = "user://profile.json"
 var profile: Dictionary = {}
 
 func default_profile():
-	var data={"version":4,"locale":"zh","adventure_bonus":{},"adventure_stage":1,"adventure_cleared":0,"cleared":0,"stage":1,"muted":false,"chars":[0,1,0,1],"settings":{"seat_roles":[-1,-1,-1,-1,-1,-1,-1,-1],"seat_characters":[-1,-1,-1,-1,-1,-1,-1,-1],"seat_teams":[-1,-1,-1,-1,-1,-1,-1,-1],"difficulty":1,"mode":0,"humans":1,"seats":4,"map":-1,"companion":true,"teams":0,"music_volume":75,"effects_volume":75},"stats":{"kills":0,"secrets":0,"pve_stages":0,"monsters":0,"bosses":0,"rounds":0,"wins":0,"losses":0,"draws":0,"bombs":0,"crates":0,"items":0,"rescues":0,"mounts":0,"deaths":0,"abandoned":0,"seconds":0.0}}
+	var data={"version":4,"locale":"zh","adventure_bonus":{},"adventure_stage":1,"adventure_cleared":0,"cleared":0,"stage":1,"muted":false,"chars":[0,1,0,1],"settings":{"race_version":false,"team_count":2,"race_laps":3,"race_seconds":180,"race_map":0,"seat_roles":[-1,-1,-1,-1,-1,-1,-1,-1],"seat_characters":[-1,-1,-1,-1,-1,-1,-1,-1],"seat_teams":[-1,-1,-1,-1,-1,-1,-1,-1],"difficulty":1,"mode":0,"humans":1,"seats":4,"map":-1,"companion":true,"teams":0,"music_volume":75,"effects_volume":75},"stats":{"kills":0,"secrets":0,"pve_stages":0,"monsters":0,"bosses":0,"rounds":0,"wins":0,"losses":0,"draws":0,"bombs":0,"crates":0,"items":0,"rescues":0,"mounts":0,"deaths":0,"abandoned":0,"seconds":0.0}}
 	for field in BATTLE_OPTIONS:data.settings["battle_"+field]=0
 	return data
 
@@ -161,6 +164,7 @@ func _ready():
 	lighting=DynamicLighting.new(self)
 	i18n=I18n.new()
 	frontend=MenuUI.new(self)
+	racing=Racing.new(self)
 	load_profile()
 	i18n.set_language(profile.locale)
 	get_tree().auto_accept_quit = false
@@ -202,7 +206,7 @@ func load_profile():
 	for field in ["seat_roles","seat_characters","seat_teams"]:
 		var values=profile.settings.get(field)
 		var cleaned=[]
-		for i in range(8):cleaned.append(clampi(int(values[i]),-1,8 if field=="seat_characters" else 1) if values is Array and values.size()==8 and (values[i] is int or values[i] is float) else -1)
+		for i in range(8):cleaned.append(clampi(int(values[i]),-1,8 if field=="seat_characters" else 7 if field=="seat_teams" else 1) if values is Array and values.size()==8 and (values[i] is int or values[i] is float) else -1)
 		set(field,cleaned)
 	for field in BATTLE_OPTIONS:
 		var value=profile.settings.get("battle_"+field,0)
@@ -211,12 +215,18 @@ func load_profile():
 	mode=clampi(int(profile.settings.mode),0,3)
 	humans=clampi(int(profile.settings.humans),1,4)
 	seats=clampi(int(profile.settings.seats),2,8)
-	selected_map=clampi(int(profile.settings.map),-1,MAP_COUNT-1)
+	selected_map=clampi(int(profile.settings.map),-1,43)
 	companion=bool(profile.settings.companion)
 	team_layout=clampi(int(profile.settings.teams),0,1)
 	if mode==0:humans=1
-	elif mode==2:seats=clampi(seats/2*2,4,8)
+	elif mode==2:seats=clampi(seats,2,8)
 	elif mode==3:seats=4
+	if mode==1 and not profile.settings.get("race_version",false):
+		mode=2;team_count=seats;seat_teams.fill(-1)
+	else:team_count=clampi(int(profile.settings.get("team_count",2)),2,seats)
+	racing.laps=clampi(int(profile.settings.get("race_laps",3)),1,9)
+	racing.time_limit=clampi(int(profile.settings.get("race_seconds",180)),60,600)
+	racing.selected=clampi(int(profile.settings.get("race_map",0)),0,2)
 	humans=mini(humans,seats)
 	campaign_stage = clampi(int(profile.stage),1,mini(20,int(profile.cleared)+1))
 	adventure_stage=clampi(int(profile.adventure_stage),1,mini(20,int(profile.adventure_cleared)+1))
@@ -231,7 +241,7 @@ func save_profile():
 	if preview_only:return true
 	profile.muted = muted
 	profile.chars = chosen_characters.duplicate()
-	profile.settings={"seat_roles":seat_roles.duplicate(),"seat_characters":seat_characters.duplicate(),"seat_teams":seat_teams.duplicate(),"difficulty":difficulty,"mode":mode,"humans":humans,"seats":seats,"map":selected_map,"companion":companion,"teams":team_layout,"music_volume":music_volume,"effects_volume":effects_volume}
+	profile.settings={"seat_roles":seat_roles.duplicate(),"seat_characters":seat_characters.duplicate(),"seat_teams":seat_teams.duplicate(),"difficulty":difficulty,"mode":mode,"humans":humans,"seats":seats,"map":selected_map,"companion":companion,"teams":team_layout,"team_count":team_count,"race_laps":racing.laps,"race_seconds":racing.time_limit,"race_map":racing.selected,"race_version":true,"music_volume":music_volume,"effects_volume":effects_volume}
 	for field in BATTLE_OPTIONS:profile.settings["battle_"+field]=battle_options[field]
 	var file = FileAccess.open(save_path+".tmp",FileAccess.WRITE)
 	if file == null:
@@ -322,11 +332,11 @@ func announce(message):
 	notice_time = 3.0
 
 func start_match():
-	if mode==2:
+	if mode in [1,2]:
 		var teams=[]
 		for i in range(lobby_count()):
 			if not teams.has(slot_team(i)):teams.append(slot_team(i))
-		if teams.size()<2:frontend.message="两队都需要至少一个席位。";return
+		if teams.size()<2:frontend.message="至少需要两支有玩家的队伍。";return
 	scores = [0,0,0,0,0,0,0,0]
 	round_index = 1
 	match_over = false
@@ -352,7 +362,7 @@ func lobby_roles():
 	return roles
 func slot_team(i):
 	if mode==3:return 0
-	if mode==2:return seat_teams[i] if seat_teams[i]>=0 else (int(i/(lobby_count()/2)) if team_layout==0 else i%2)
+	if mode in [1,2]:return posmod(seat_teams[i],team_count) if seat_teams[i]>=0 else i%team_count
 	if mode==0:return 0 if i==0 or (companion and lobby_count()==4 and i==1) else 1
 	return i
 func slot_character(i):
@@ -369,8 +379,9 @@ func new_round():
 	if mode == 0:
 		choice = campaign_stage-1
 		profile.stage = campaign_stage
+	elif mode==1:choice=44+racing.selected
 	elif mode==3:choice=20+adventure_stage-1
-	elif choice < 0: choice = rng.randi_range(0,MAP_COUNT-1)
+	elif choice < 0: choice = rng.randi_range(0,43)
 	build_board(choice,true)
 	play_theme(Catalog.MAPS[choice].theme)
 	players.clear()
@@ -425,31 +436,28 @@ func new_round():
 		adventure.setup()
 		world_fx.design_board(true)
 		crates.setup()
-	world_fx.add_shelters(mode==3)
+	if mode!=1:world_fx.add_shelters(mode==3)
 	weather.setup()
+	racing.reset_air()
+	if mode==1:racing.setup()
 	# Equal, reachable opening growth for every battle seat.
-	if mode!=3:
+	if mode not in [1,3]:
 		for p in players:
 			var inward=Vector2i(1 if p.cell.x<W/2 else -1,1 if p.cell.y<H/2 else -1)
 			for entry in [[p.cell+Vector2i(inward.x*2,0),4],[p.cell+Vector2i(0,inward.y*2),5]]:
 				if passable(entry[0]) and not drops.has(entry[0]):drops[entry[0]]=entry[1]
 
 func round_spawns(count):
+	if mode==1:return SPAWNS.slice(0,count)
 	var result=[]
 	for i in range(count):
 		var index=i if mode==3 else [0,4,1,5,2,6,3,7][i]
-		if mode==2:
-			if seat_teams.any(func(value):return value>=0):
-				var team=slot_team(i);var rank=0
-				for earlier in range(i):
-					if slot_team(earlier)==team:rank+=1
-				index=([0,1,2,3,7,6,5] if team==0 else [4,5,6,7,3,2,1])[rank]
-			else:index=(i/(count/2) if team_layout==0 else i%2)*4+(i%(count/2) if team_layout==0 else i/2)
-		elif mode==0 and count==4:index=[0,1,4,5][i]
+		if mode==0 and count==4:index=[0,1,4,5][i]
 		result.append(SPAWNS[index])
 	return result
 
 func match_seconds(index):
+	if mode==1:return racing.time_limit
 	return [Catalog.MAPS[index].seconds,60,90,150,210,300][battle_options.collapse] if mode in [1,2] else Catalog.MAPS[index].seconds+(90 if mode==3 else 0)
 func collapse_step():return [5.0,3.0,8.0,12.0][battle_options.pace] if mode in [1,2] else 5.0
 func loot_chance(chance):return minf(1.0,chance*[1.0,.5,.8,1.3][battle_options.loot]) if mode in [1,2] else chance
@@ -472,6 +480,7 @@ func passable(c,p=null):
 func bubble_can_move(c): return passable(c) and occupied(c)==null
 
 func build_board(index,playing=false):
+	if index>=44:racing.build(index);return
 	map_void.clear();camera=Vector2.ZERO
 	W=27;H=19
 	if playing and mode==3:
@@ -625,12 +634,12 @@ func _unhandled_key_input(event):
 			refresh_preview()
 			return
 		if state=="maps":
-			if key==KEY_LEFT: selection=posmod(selection-1,MAP_COUNT)
-			elif key==KEY_RIGHT: selection=(selection+1)%MAP_COUNT
-			elif key==KEY_UP: selection=posmod(selection-4,MAP_COUNT)
-			elif key==KEY_DOWN: selection=(selection+4)%MAP_COUNT
+			if key==KEY_LEFT: selection=posmod(selection-1,44)
+			elif key==KEY_RIGHT: selection=(selection+1)%44
+			elif key==KEY_UP: selection=posmod(selection-4,44)
+			elif key==KEY_DOWN: selection=(selection+4)%44
 			elif key==KEY_ENTER:
-				selected_map=selection
+				selected_map=mini(selection,43)
 				frontend.back()
 				refresh_preview()
 				save_profile()
@@ -719,10 +728,10 @@ func _unhandled_input(event):
 	elif state=="maps":
 		for slot in range(20):
 			if Rect2(12+(slot%4)*156,45+int(slot/4)*56,147,52).has_point(pos):
-				if int(selection/20)*20+slot>=MAP_COUNT:continue
-				selection=int(selection/20)*20+slot;selected_map=selection;frontend.back();refresh_preview();save_profile();break
-		if pos.y>=328 and pos.y<=358 and pos.x<120:selection=posmod(int(selection/20)-1,int(ceil(MAP_COUNT/20.0)))*20
-		elif pos.y>=328 and pos.y<=358 and pos.x>520:selection=posmod(int(selection/20)+1,int(ceil(MAP_COUNT/20.0)))*20
+				if int(selection/20)*20+slot>=44:continue
+				selection=int(selection/20)*20+slot;selected_map=mini(selection,43);frontend.back();refresh_preview();save_profile();break
+		if pos.y>=328 and pos.y<=358 and pos.x<120:selection=posmod(int(selection/20)-1,int(ceil(44/20.0)))*20
+		elif pos.y>=328 and pos.y<=358 and pos.x>520:selection=posmod(int(selection/20)+1,int(ceil(44/20.0)))*20
 	elif state=="characters":
 		for slot in range(lobby_count()):
 			if Rect2(32+slot*75,68,65,18).has_point(pos):character_slot=slot;selection=slot_character(slot);return
@@ -738,7 +747,7 @@ func next_character(value,direction):
 		if character_unlocked(value): return value
 	return 0
 func refresh_preview():
-	build_board((20+adventure_stage-1) if mode==3 else (campaign_stage-1 if mode==0 else maxi(0,selected_map)))
+	build_board((44+racing.selected) if mode==1 else (20+adventure_stage-1) if mode==3 else (campaign_stage-1 if mode==0 else maxi(0,selected_map)))
 	update_music(0)
 func pause_action(choice):
 	if choice==0: state=pause_return;paused=false
@@ -798,6 +807,7 @@ func update_game(dt):
 	if supply_time<=0:
 		supply_time+=12 if rule()=="sand" else 20
 		drop_supply()
+	racing.airborne(dt)
 	crates.update(dt)
 	bubble_fx.update(dt)
 	map_rules.update(dt)
@@ -807,7 +817,7 @@ func update_game(dt):
 	for p in players:
 		for timer in ["hurt","placing","down","pop_time","torch","shield","dash","kick","cloak","magnet","freeze","slow","grace","warp","flow","think","jump","attack","push_cool","reverse_time"]: p[timer]=maxf(0,p[timer]-dt)
 		p.cool=maxf(0,p.cool-dt)
-		if p.dead:p.velocity=Vector2.ZERO;p.move=1;continue
+		if p.dead or (mode==1 and p.get("race_finished",false)):p.velocity=Vector2.ZERO;p.move=1;continue
 		if round_time-p.push_last>.10:p.push_cell=Vector2i(-1,-1)
 		if p.jump_travel>0 and p.trap<=0 and p.freeze<=0:
 			p.jump_travel=maxf(0,p.jump_travel-dt)
@@ -831,8 +841,9 @@ func update_game(dt):
 		if p.bot:
 			if p.think<=0:
 				p.think=[.28,.14,.08][difficulty]
-				p.ai_dir=bot_direction(p,danger)
-				bot_actions(p,danger)
+				p.ai_dir=racing.bot_direction(p,danger) if mode==1 else bot_direction(p,danger)
+				if mode!=1:bot_actions(p,danger)
+				elif difficulty>0 and bombs.size()<12 and rng.randf()<.015:bot_actions(p,danger)
 			dir=Vector2(p.ai_dir)
 			# Bot routes still use tile centres, but position and collision are continuous.
 			if dir.x!=0:dir.y=clampf(roundf(p.visual.y)-p.visual.y,-.8,.8)*4
@@ -871,6 +882,7 @@ func update_game(dt):
 	blasts=blasts.filter(func(f):return f.time>0)
 	for d in decoys:d.time-=dt
 	decoys=decoys.filter(func(d):return d.time>0)
+	if mode==1:racing.update(dt);return
 	if clock_time<=0:
 		var ring=mini(H/2-1,int(-clock_time/collapse_step()))
 		if ring>sudden_ring:sudden_ring=ring;flood_ring(ring+1)
@@ -910,7 +922,10 @@ func move_player(p,input_direction,dt):
 	var ice=terrain.has(p.cell) and terrain[p.cell].type=="ice"
 	var target_velocity=dir*speed
 	if terrain.has(p.cell) and terrain[p.cell].type=="flow":target_velocity+=Vector2(terrain[p.cell].dir)*speed*.38
-	p.velocity=p.velocity.move_toward(target_velocity,dt*(25.0 if ice else 48.0 if dir!=Vector2.ZERO else 65.0))
+	if mode==1 and p.get("car",false):
+		target_velocity=racing.vehicle_target(p,dir,dt)
+		p.velocity=p.velocity.move_toward(target_velocity,dt*(2.2 if dir!=Vector2.ZERO else 3.0))
+	else:p.velocity=p.velocity.move_toward(target_velocity,dt*(25.0 if ice else 48.0 if dir!=Vector2.ZERO else 65.0))
 	var before=p.visual
 	var displacement=p.velocity*dt
 	var segments=maxi(1,int(ceil(displacement.length()/.10)))
@@ -1010,7 +1025,7 @@ func eject_from_box(p):
 	grid[p.cell.y][p.cell.x]=0
 
 func damage_player(p,owner):
-	if p.dead or p.grace>0 or p.trap>0:return
+	if p.dead or p.grace>0 or p.trap>0 or (mode==1 and p.get("race_finished",false)):return
 	p.hurt=.48
 	p.recoil=Vector2(p.facing)*-1
 	if owner>=0 and owner<players.size() and players[owner].cell!=p.cell:p.recoil=Vector2(p.cell-players[owner].cell).normalized()
@@ -1044,6 +1059,7 @@ func kill_player(p,killer=-1):
 	p.capacity=p.get("base_capacity",1);p.range=p.get("base_range",1);p.speed=p.get("base_speed",0);p.reverse_time=0;p.jump_travel=0
 	scatter_growth()
 	p.dead=true;p.trap=0;p.down=1.05;p.pop_time=.55;p.pop_row=0
+	if mode==1:p.respawn=10.0;p.car=false;p.mount=0
 	burst(center(p.cell),color_for(p),18)
 	if p.get("control",p.id)==0:stat("deaths")
 	sound("bubble-pop")
@@ -1063,6 +1079,7 @@ func scatter_growth():
 	death_loot=death_loot.filter(func(loot):return not loot.items.is_empty())
 
 func random_drop():
+	if mode==1 and rng.randf()<.45:return 31
 	var rare=rng.randf()
 	if rare<.01:return 29
 	if rare<.02:return 30
@@ -1086,6 +1103,7 @@ func pickup(p,c,manual=false):
 	if not drops.has(c):return
 	var kind=int(drops[c])
 	if kind==8:drops.erase(c);return
+	if kind==31 and (mode!=1 or p.get("car",false)):return
 	if growth_full(p,kind):return
 	var category=Catalog.ITEMS[kind].kind
 	if category=="active" and not manual and ((p.bot and p.pickup_lock==c) or (p.item!=0 and not p.bot)):return
@@ -1099,6 +1117,7 @@ func pickup(p,c,manual=false):
 	if category=="active" and not p.bot:announce("拾取"+Catalog.ITEMS[kind].name+("，原道具留在地上。" if previous>0 else ""))
 	pickup_effects.append({"pos":center(c),"kind":kind,"life":.65})
 	match kind:
+		31:p.car=true;p.mount=0;p.velocity=Vector2.ZERO;p.car_heading=Vector2(p.facing)
 		4:p.capacity=mini(6,p.capacity+1)
 		5:p.range=mini(8,p.range+1)
 		7:p.speed=mini(5,p.speed+1)
@@ -1410,13 +1429,16 @@ func finish_round(winner):
 	for p in players:
 		p.velocity=Vector2.ZERO;p.move=1.0;p.facing=Vector2i.DOWN
 		p.hurt=0;p.placing=0;p.jump_travel=0;p.jump=0
+	if mode==1:
+		for p in players:
+			p.visual=racing.checkpoints[0].pos+Vector2(-3+(p.id%4)*2,-2+int(p.id/4)*3);p.cell=Vector2i(p.visual.round())
 	result_winner=winner
 	if winner>=0:scores[winner]+=1
-	match_over=mode in [0,3] or (winner>=0 and scores[winner]>=2)
+	match_over=mode in [0,1,3] or (winner>=0 and scores[winner]>=2)
 	if winner<0:result_text="这一局平手"
 	elif mode==3:result_text=("群岛重获新生！" if adventure_stage==20 else "冒险任务完成！") if winner==0 else "冒险暂时受挫"
 	elif mode==0:result_text=("群岛通关！" if campaign_stage==20 else "闯关成功！") if winner==0 else "这次没闯过去"
-	elif mode==2:result_text=("蓝队" if winner==0 else "桃队")+("夺冠！" if match_over else "获胜！")
+	elif mode in [1,2]:result_text=loc("队伍 %d") % (winner+1)+("夺冠！" if match_over else "获胜！")
 	else:
 		var champion=players.filter(func(p):return p.team==winner)[0]
 		result_text=Catalog.CHARACTERS[champion.character].name+("夺冠！" if match_over else "获胜！")
@@ -1465,7 +1487,7 @@ func danger_cells():
 	if rule()=="lava" and fmod(round_time,10)>5.5:
 		for c in terrain:
 			if terrain[c].type=="lava":danger[c]=0
-	if clock_time<=3:
+	if mode!=1 and clock_time<=3:
 		var next_ring=sudden_ring+2
 		for y in range(1,H-1):
 			for x in range(1,W-1):
@@ -1705,6 +1727,7 @@ func health_bar(pos,hp,maximum,width=20,height=2):
 
 func item_icon(pos,kind,side=20):
 	if kind<=0 or kind==8:return
+	if kind==31:hd.sprite(Racing.ART,3,pos,Vector2.ONE*side);return
 	if kind in [5,29,30]:hd.sprite({5:"items/water-reach-v480.png",29:"items/strength-pill-v480.png",30:"items/demon-mask-v480.png"}[kind],0,pos,Vector2.ONE*side)
 	elif kind==28:hd.sprite("items/pressure-core-v464.png",0,pos,Vector2.ONE*side)
 	else:hd.sprite("items/remote-hd.png" if kind==3 else "items/items-hd.png",0 if kind==3 else kind,pos,Vector2.ONE*side)
@@ -1771,15 +1794,16 @@ func face_portrait(pos,character,size,palette_id=-1):
 	else:canvas.draw_texture_rect_region(hd.textures[HDArt.HERO_VIEWS[0]],Rect2(at,drawn),source)
 
 func color_for(p):
-	if mode in [0,2,3]:return COLORS[0 if p.team==0 else 1]
+	if mode in [0,1,2,3]:return COLORS[p.team%8]
 	return COLORS[p.id]
 func burst(pos,color,amount):
 	for i in range(amount):particles.append({"pos":pos,"vel":Vector2(rng.randf_range(-32,32),rng.randf_range(-42,10)),"life":rng.randf_range(.25,.55),"color":color})
 
 func _draw():
 	canvas=self
-	world_clip.visible=state in ["play","pause","finale","result"]
-	game_overlay.visible=world_clip.visible
+	racing.sync_views()
+	world_clip.visible=state in ["play","pause","finale","result"] and mode!=1
+	game_overlay.visible=state in ["play","pause","finale","result"]
 	game_overlay.queue_redraw()
 	if backgrounds.is_empty():return
 	canvas.draw_texture_rect(backgrounds[Catalog.MAPS[arena].theme],Rect2(Vector2.ZERO,Vector2(640,360)),false,Color.WHITE.lerp(Color(.12,.17,.26),weather.nightness*.8 if weather.flare_time<=0 else 0))
@@ -1792,6 +1816,7 @@ func _draw():
 	if state=="help":draw_help();return
 	if state=="codex":encyclopedia.draw();return
 	if state=="languages":draw_languages();return
+	if mode==1:racing.draw_hud();return
 	draw_hud()
 	draw_sidebar()
 	if mode==3:draw_pve_minimap()
@@ -1800,6 +1825,15 @@ func _draw():
 
 func draw_tile(c):
 	if map_void.has(c):return
+	if arena>=44:
+		var pos=ORIGIN+Vector2(c)*TILE
+		rect(pos,Vector2(TILE,TILE),Color("52616a") if grid[c.y][c.x] in [0,2] else Color("6d956b"))
+		if grid[c.y][c.x]==1:hd.sprite(Racing.ART,9,pos,Vector2(TILE,TILE),Color(1,1,1,.65),false)
+		if grid[c.y][c.x]==1 and DIRS.any(func(d):return inside(c+d) and grid[c.y+d.y][c.x+d.x] in [0,2]):
+			rect(pos,Vector2(TILE,TILE),Color("617c6b"))
+			rect(pos+Vector2(1,1),Vector2(14,3),Color("e8d7bf") if (c.x+c.y)%2 else Color("a94e48"))
+		if grid[c.y][c.x] in [0,2] and (c.x*7+c.y*11)%5==0:rect(pos+Vector2(3+(c.y%7),4+(c.x%7)),Vector2(1,1),Color("61717b"))
+		return
 	var theme=Catalog.MAPS[arena].theme
 	var pos=ORIGIN+Vector2(c)*TILE
 	var cell=grid[c.y][c.x]
@@ -1856,7 +1890,7 @@ func draw_terrain():
 			if inside(c):
 				if hazard.has("skill"):adventure.draw_skill_warning(hazard,c)
 				else:canvas.draw_arc(center(c),6,0,TAU,32,Color("ffbb65"),.8)
-	if clock_time<=3:
+	if mode!=1 and clock_time<=3:
 		for y in range(1,H-1):
 			for x in range(1,W-1):
 				if mini(mini(x,W-1-x),mini(y,H-1-y))==sudden_ring+2:canvas.draw_rect(Rect2(ORIGIN+Vector2(x,y)*TILE+Vector2.ONE,Vector2.ONE*(TILE-2)),Color(1,.75,.3,.5+.3*sin(elapsed*9)),false,.8)
@@ -1958,6 +1992,7 @@ func draw_actor(pos,p):
 		canvas.draw_texture_rect(hero_palette.texture_for(p.id,false,hd.textures["characters/actions/hero-death-v5.png"],source),Rect2(pos+Vector2(-drawn.x/2,5-drawn.y),drawn),false)
 		draw_bubble_break(pos,p)
 		return
+	if mode==1 and p.get("car",false):racing.draw_car(pos,p,Color.WHITE);return
 	var color=color_for(p)
 	var walking=p.move<1 and p.trap<=0 and p.freeze<=0 and not p.dead
 	var phase=p.gait*PI
@@ -2094,12 +2129,18 @@ func mini_board(pos,step=8):
 		for x in range(W):
 			var cell=grid[y][x]
 			var kind=2 if cell==1 else (3 if cell==2 else (x+y)%2)
-			hd.theme_sprite(theme,kind,pos+Vector2(x,y)*step,Vector2(step,step),Color.WHITE,false)
+			if arena>=Racing.FIRST_MAP:rect(pos+Vector2(x,y)*step,Vector2.ONE*step,Color("537e56") if cell==1 else Color("aa744b") if cell==2 else Color("77888d"))
+			else:hd.theme_sprite(theme,kind,pos+Vector2(x,y)*step,Vector2(step,step),Color.WHITE,false)
 	for c in terrain:
 		var type=terrain[c].type
 		if type=="shelter":hd.sprite("maps/decorations/shelters-v480.png",terrain[c].art,pos+Vector2(c)*step,Vector2.ONE*step)
 		if type in ["portal","spring","lava","switch","ice"]:
 			canvas.draw_circle(pos+Vector2(c)*step+Vector2(step/2,step/2),step*.35,Color("d5aeff") if type=="portal" else Color("ffe1aa"))
+
+	if arena>=Racing.FIRST_MAP:
+		for i in range(racing.checkpoints.size()):
+			var cp=racing.checkpoints[i];var side=Vector2(-cp.dir.y,cp.dir.x)
+			canvas.draw_line(pos+(cp.pos-side*3)*step,pos+(cp.pos+side*3)*step,Color("ffe3a8") if i==0 else Color("7ce3ff"),maxf(1,step*.6))
 
 func page_header(title):
 	rect(Vector2.ZERO,Vector2(640,360),Color(.04,.08,.14,.6))
@@ -2111,7 +2152,7 @@ func draw_map_browser():
 	var page=int(selection/20)
 	for slot in range(20):
 		var i=page*20+slot
-		if i>=MAP_COUNT:continue
+		if i>=44:continue
 		var map=Catalog.MAPS[i]
 		var pos=Vector2(12+(slot%4)*156,45+int(slot/4)*56)
 		panel(pos,Vector2(147,52),Color("ffe08e") if i==selection else Color("527a8c"))
@@ -2121,7 +2162,7 @@ func draw_map_browser():
 		text_at(["海港","森林","冰雪","沙漠","火山","工厂","糖果","星空","沼泽","遗迹","深海","空港","王城","洞窟"][map.theme],pos+Vector2(83,39),12,Color("a8c5c4"))
 	button(Vector2(12,331),Vector2(100,23),"上一页")
 	button(Vector2(528,331),Vector2(100,23),"下一页")
-	centered(loc("第%d/%d页 · 方向键选择 / 回车选图") % [page+1,int(ceil(MAP_COUNT/20.0))],348,12)
+	centered(loc("第%d/%d页 · 方向键选择 / 回车选图") % [page+1,int(ceil(44/20.0))],348,12)
 
 func draw_characters():
 	page_header("人物与坐骑")
@@ -2183,7 +2224,7 @@ func draw_result():
 	elif mode==0:
 		centered(loc("第%d关 / %s") % [campaign_stage,Catalog.MAPS[arena].name],89,11)
 	else:
-		var label=loc("蓝队 %d : %d 桃队") % [scores[0],scores[1]] if mode==2 else "比分  "+" : ".join(scores.slice(0,players.size()).map(func(value):return str(value)))
+		var label=(loc("队伍积分")+"  "+" / ".join(range(team_count).map(func(team):return (loc("队伍 %d") % (team+1))+" "+str(players.filter(func(p):return p.team==team).reduce(func(total,p):return total+p.race_points,0))))) if mode==1 else "比分  "+" : ".join(scores.slice(0,team_count).map(func(value):return str(value)))
 		centered(label,89,11)
 	for i in range(players.size()):
 		var p=players[i];var pos=Vector2(70+(i%2)*255,115+int(i/2)*38)
@@ -2191,6 +2232,7 @@ func draw_result():
 		face_portrait(pos+Vector2(5,3),p.character,Vector2(24,27),p.id)
 		text_at(("B" if p.bot else "P")+str(p.id+1)+" · "+loc(Catalog.CHARACTERS[p.character].name)+" · "+loc("电脑" if p.bot else "玩家"),pos+Vector2(35,12),9,color_for(p),203)
 		var detail=loc("击杀 %d · 救援 %d") % [p.round_kills,p.round_rescues]
+		if mode==1:detail=(loc("第 %d 名 · %d 分") % [p.race_rank,p.race_points]) if p.race_finished else loc("未完成 · 0 分")
 		if mode==3:detail+=" · "+loc("击败怪物 %d") % p.round_monsters
 		text_at(detail,pos+Vector2(35,27),10,CREAM,203)
 	var action=(("下一节" if adventure_stage<20 else "重温故事") if result_winner==0 else "重试本节") if mode==3 else ("下一关" if campaign_stage<20 else "重新冒险") if mode==0 and result_winner==0 else ("再战本关" if mode==0 else ("新一场" if match_over else "下一局"))
@@ -2237,7 +2279,8 @@ func draw_world():
 	rect(ORIGIN-Vector2(3,3),Vector2(W*TILE+6,H*TILE+6),Color("111b30"))
 	for y in range(maxi(0,int(camera.y)-1),mini(H,int(camera.y+VIEW_SIZE.y)+2)):
 		for x in range(maxi(0,int(camera.x)-1),mini(W,int(camera.x+VIEW_SIZE.x)+2)):draw_tile(Vector2i(x,y))
-	world_fx.draw_ground()
+	if mode==1:racing.draw_ground()
+	else:world_fx.draw_ground()
 	bubble_fx.draw_fields()
 	draw_terrain()
 	map_rules.draw()
@@ -2252,7 +2295,7 @@ func draw_world():
 	for y in range(maxi(0,int(camera.y)-2),mini(H,int(camera.y+VIEW_SIZE.y)+3)):
 		for x in range(maxi(0,int(camera.x)-2),mini(W,int(camera.x+VIEW_SIZE.x)+3)):
 			var c=Vector2i(x,y)
-			if not map_void.has(c) and (grid[y][x]==1 or (grid[y][x]==2 and crates.at(c)==null)):depth.append({"y":float(y+1)*TILE,"kind":"wall","data":c})
+			if arena<44 and not map_void.has(c) and (grid[y][x]==1 or (grid[y][x]==2 and crates.at(c)==null)):depth.append({"y":float(y+1)*TILE,"kind":"wall","data":c})
 	for c in terrain:
 		if is_shelter(c) and grid[c.y][c.x]==0:depth.append({"y":c.y*TILE+16.0,"kind":"shelter","data":c})
 		if terrain[c].type=="lamp" and grid[c.y][c.x]==0:depth.append({"y":c.y*TILE+14.0,"kind":"lamp","data":c})
@@ -2301,7 +2344,7 @@ func draw_world():
 				portrait(center(entry.data.cell)-Vector2(10,15),entry.data.character)
 				canvas.draw_arc(center(entry.data.cell),9,0,TAU,20,Color("d8abef"),1)
 	for p in players:
-		if concealed(p) and p.team==primary_player().team:
+		if concealed(p) and p.team==(racing.view_team if racing.view_team>=0 else primary_player().team):
 			var at=ORIGIN+p.visual*TILE+Vector2(8,8)
 			hero_sprite(at-Vector2(9,15),p.character,Vector2(18,20),0,0,Color(.65,.87,1,.28),false,-1,p.id)
 			canvas.draw_arc(at+Vector2(0,5),6,0,TAU,24,Color(COLORS[p.id],.5),.8)
@@ -2317,6 +2360,7 @@ func draw_world():
 	for p in particles:rect(p.pos.round(),Vector2(2,2),p.color)
 	world_fx.draw_air()
 	map_rules.draw_overlay()
+	racing.draw_air()
 	draw_pickup_prompts()
 	canvas.draw_set_transform(Vector2.ZERO)
 

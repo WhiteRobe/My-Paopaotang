@@ -35,7 +35,7 @@ func setup():
 			if g.gold_boxes.has(c) or g.vine_cells.has(c):kind="normal"
 			add(c,kind)
 	# Paired vaults keep opposing battle spawns equally far from the reward.
-	var vault_positions=[Vector2i(g.W/2-5,g.H/2-3),Vector2i(g.W/2+4,g.H/2+2)] if g.mode!=3 else [Vector2i(16,9) if (g.adventure_stage%4)==0 else Vector2i(7,3)]
+	var vault_positions=[] if g.arena>=g.Racing.FIRST_MAP else [Vector2i(g.W/2-5,g.H/2-3),Vector2i(g.W/2+4,g.H/2+2)] if g.mode!=3 else [Vector2i(16,9) if (g.adventure_stage%4)==0 else Vector2i(7,3)]
 	for vault_pos in vault_positions:
 		for b in boxes:
 			if footprint(b).any(func(c):return Rect2i(vault_pos,Vector2i(2,2)).has_point(c)):b.dead=true

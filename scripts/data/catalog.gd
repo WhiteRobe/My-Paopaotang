@@ -45,7 +45,10 @@ const MAPS = [
 	{"name":"火炬岩窟","theme":13,"rule":"cave","seconds":190,"layout":40,"night":true,"tip":"洞窟常年黑夜，随机火把提供稳定视野。照明弹可照亮全图。"},
 	{"name":"迷雾矿道","theme":13,"rule":"cavefog","seconds":200,"layout":41,"night":true,"fog":true,"tip":"浓雾周期覆盖矿道，风会暂时吹散雾气。手持火把能扩大视野。"},
 	{"name":"地下暗河","theme":13,"rule":"flow","seconds":195,"layout":42,"night":true,"tip":"暗河水流推动角色，沿火把探索通道。泡泡爆炸前逐渐发亮。"},
-	{"name":"蝠影回音厅","theme":13,"rule":"echo","seconds":210,"layout":43,"night":true,"tip":"蝙蝠飞过钟乳石洞厅。爆炸留下回声，火把和照明弹帮助观察退路。"}
+	{"name":"蝠影回音厅","theme":13,"rule":"echo","seconds":210,"layout":43,"night":true,"tip":"蝙蝠飞过钟乳石洞厅。爆炸留下回声，火把和照明弹帮助观察退路。"},
+	{"name":"海港环岛赛道","theme":0,"rule":"race","seconds":180,"layout":44,"tip":"驾驶赛车依次通过检查点，完成三圈。"},
+	{"name":"森林折返赛道","theme":1,"rule":"race","seconds":180,"layout":45,"tip":"弯道提前减速，避免冲出赛车路线。"},
+	{"name":"工厂双弯赛道","theme":5,"rule":"race","seconds":180,"layout":46,"tip":"利用惯性过弯，争夺固定赛车补给。"}
 ]
 const ITEMS = [
 	{"name":"空", "kind":"none", "tip":"炸箱子或抢中央补给。", "color":"a9b8ca"},
@@ -78,7 +81,8 @@ const ITEMS = [
 	{"name":"火把","kind":"active","tip":"二十秒内扩大自身视野，照穿附近的黑暗与雾气。","color":"ffbe7a"},
 	{"name":"高压核心","kind":"growth","tip":"PVE 专属：拾取后泡泡对怪物和 Boss 的伤害加一，最多三级；不改变箱体耐久。","color":"ff6565"},
 	{"name":"大力丸","kind":"rare","tip":"稀有成长：水柱覆盖整行与整列，仍被墙和箱子阻挡。死亡后全部掉出。","color":"ffd479"},
-	{"name":"邪魔面具","kind":"rare","tip":"拾取即生效：50% 中毒，操作反向二十秒；50% 泡泡数量、速度、纵横水柱全部拉满。死亡后掉出。","color":"bd91ef"}
+	{"name":"邪魔面具","kind":"rare","tip":"拾取即生效：50% 中毒，操作反向二十秒；50% 泡泡数量、速度、纵横水柱全部拉满。死亡后掉出。","color":"bd91ef"},
+	{"name":"赛车","kind":"vehicle","tip":"拾取后驾驶，缓慢起速、持续加速；驾驶通过赛车检查点才有效。","color":"62ceff"}
 ]
 const CHARACTERS = [
 	{"name":"蓝莓", "color":"62ceff", "style":0, "unlock":0, "capacity":2, "range":1, "speed":0, "perk":"初始泡泡 2 · 水柱 1 · 速度 0；局内可继续成长。"},

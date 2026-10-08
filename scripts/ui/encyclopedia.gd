@@ -33,7 +33,7 @@ const BOXES=[
  ["空心树干","森林与沼泽的双向藏身处，开口可通行，树干侧壁挡住人物与水柱。"],
  ["四门小屋","主题藏身建筑，四向出入；不会挡住水柱，不能靠藏身免疫伤害。"],
  ["四门帐篷","营地藏身处，四向出入；己方保留淡轮廓，水柱可进入。"]]
-const RULE_NAMES={"cave":"常夜洞窟","cavefog":"洞窟迷雾","tide":"潮汐坍塌","portal":"传送环","flow":"水流","mushroom":"蘑菇跳板","vine":"再生藤蔓","wind":"阵风","ice":"滑冰","blizzard":"暴风雪","sand":"流沙","gate":"开关石门","lava":"熔岩喷发","quake":"地震","spring":"弹床","treasure":"星币争夺","laser":"激光","magnet":"磁场","gravity":"低重力","meteor":"陨星","train":"列车","storm":"雷暴","mud":"泥潭","poison":"毒雾","geyser":"喷泉","mirror":"棱镜","spikes":"尖刺","echo":"爆炸回声","currents":"双向潮流","whirlpool":"漩涡","chronofield":"时钟场","gustpads":"风垫","bridges":"浮桥","turrets":"瞄准炮台","blackout":"灯塔熄灭"}
+const RULE_NAMES={"race":"赛车检查点","cave":"常夜洞窟","cavefog":"洞窟迷雾","tide":"潮汐坍塌","portal":"传送环","flow":"水流","mushroom":"蘑菇跳板","vine":"再生藤蔓","wind":"阵风","ice":"滑冰","blizzard":"暴风雪","sand":"流沙","gate":"开关石门","lava":"熔岩喷发","quake":"地震","spring":"弹床","treasure":"星币争夺","laser":"激光","magnet":"磁场","gravity":"低重力","meteor":"陨星","train":"列车","storm":"雷暴","mud":"泥潭","poison":"毒雾","geyser":"喷泉","mirror":"棱镜","spikes":"尖刺","echo":"爆炸回声","currents":"双向潮流","whirlpool":"漩涡","chronofield":"时钟场","gustpads":"风垫","bridges":"浮桥","turrets":"瞄准炮台","blackout":"灯塔熄灭"}
 var g
 var category=0
 var selected=0
@@ -107,6 +107,7 @@ func icon(entry,pos,side):
 			var tile={"tide":1,"portal":4,"flow":6,"currents":6,"ice":12,"blizzard":12,"sand":14,"whirlpool":14,"gate":10,"laser":9,"spikes":1,"turrets":8,"gravity":11,"gustpads":6,"wind":11,"bridges":6,"mirror":13,"meteor":15,"storm":15,"lava":15,"quake":15,"train":7,"chronofield":11,"geyser":3,"mud":14,"echo":5,"magnet":13}
 			if tile.has(rule):g.hd.sprite("maps/mechanisms/mechanisms-v472.png",tile[rule],pos,Vector2.ONE*side)
 			elif rule=="vine" or rule=="poison":g.hd.sprite("effects/water-vines-v473.png",3,pos,Vector2.ONE*side)
+			elif rule=="race":g.hd.sprite(g.Racing.ART,11,pos,Vector2.ONE*side)
 			elif rule=="treasure":g.item_icon(pos,19,side)
 			elif rule=="mushroom" or rule=="spring":g.hd.sprite("maps/mechanisms/mechanisms-v472.png",0,pos,Vector2.ONE*side)
 			elif rule in ["洞窟固定火把","手持火把","cave","blackout"]:g.item_icon(pos,27,side)
@@ -148,17 +149,17 @@ func preview(entry):
 	if previews.has(key):return previews[key]
 	var board=g.get_script().new()
 	board.preview_only=true;board.profile=board.default_profile()
-	board.mode=3 if entry.category==7 else 1
+	board.mode=3 if entry.category==7 else 2
 	board.adventure_stage=entry.kind+1 if entry.category==7 else 1
 	board.map_rules=g.MapMechanisms.new(board);board.world_fx=g.WorldEffects.new(board);board.crates=g.Crates.new(board)
-	board.adventure=g.Adventure.new(board);board.rng.seed=1103+entry.kind
+	board.adventure=g.Adventure.new(board);board.racing=g.Racing.new(board);board.rng.seed=1103+entry.kind
 	board.build_board(board.adventure.Story.STAGES[entry.kind].map if entry.category==7 else entry.kind,entry.category==7)
 	if entry.category==7:
 		for i in range(4):board.players.append({"id":i,"bot":false,"cell":board.SPAWNS[i],"visual":Vector2(board.SPAWNS[i])})
 		board.adventure.setup();board.world_fx.design_board(true);board.crates.setup();board.world_fx.add_shelters(true)
-	var data={"grid":board.grid.duplicate(true),"void":board.map_void.duplicate(),"terrain":board.terrain.duplicate(true),"W":board.W,"H":board.H,"theme":board.Catalog.MAPS[board.arena].theme}
+	var data={"grid":board.grid.duplicate(true),"void":board.map_void.duplicate(),"terrain":board.terrain.duplicate(true),"W":board.W,"H":board.H,"theme":board.Catalog.MAPS[board.arena].theme,"race":board.arena>=g.Racing.FIRST_MAP,"checkpoints":board.racing.checkpoints.duplicate(true)}
 	previews[key]=data
-	board.map_rules=null;board.world_fx=null;board.crates=null;board.adventure=null;board.free()
+	board.map_rules=null;board.world_fx=null;board.crates=null;board.adventure=null;board.racing=null;board.free()
 	return data
 func draw_preview(entry,frame):
 	var data=preview(entry)
@@ -171,10 +172,16 @@ func draw_preview(entry,frame):
 			if data.void.has(c):continue
 			var cell=data.grid[y][x]
 			var kind=2 if cell==1 else 3 if cell==2 else (x+y)%2
-			g.hd.theme_sprite(data.theme,kind,offset+Vector2(c)*step,Vector2.ONE*step,Color.WHITE,false)
+			if data.race:g.rect(offset+Vector2(c)*step,Vector2.ONE*step,Color("537e56") if cell==1 else Color("aa744b") if cell==2 else Color("77888d"))
+			else:g.hd.theme_sprite(data.theme,kind,offset+Vector2(c)*step,Vector2.ONE*step,Color.WHITE,false)
 	for c in data.terrain:
 		var type=data.terrain[c].type
 		if type in ["portal","switch","vortex","spring","lava","spike","clock","rail","flow"]:
 			var at=offset+(Vector2(c)+Vector2.ONE*.5)*step
 			g.canvas.draw_circle(at,step*.3,Color("96dcf0") if type in ["flow","vortex"] else Color("f5d692"))
 		elif type=="shelter":g.hd.sprite("maps/decorations/shelters-v480.png",data.terrain[c].art,offset+Vector2(c)*step,Vector2.ONE*step)
+
+	if data.race:
+		for i in range(data.checkpoints.size()):
+			var cp=data.checkpoints[i];var side=Vector2(-cp.dir.y,cp.dir.x)
+			g.canvas.draw_line(offset+(cp.pos-side*3)*step,offset+(cp.pos+side*3)*step,Color("ffe3a8") if i==0 else Color("7ce3ff"),maxf(1,step*.6))

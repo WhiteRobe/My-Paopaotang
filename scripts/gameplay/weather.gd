@@ -36,14 +36,14 @@ func update(dt):
 	var phase=fmod(g.round_time,90)
 	nightness=0.0 if phase<35 else (clampf((phase-35)/10,0,1) if phase<75 else clampf((90-phase)/15,0,1))
 	if not g.Catalog.MAPS[g.arena].get("daynight",false):nightness=0
-	if g.mode in [1,2]:
+	if g.mode==2:
 		if g.battle_options.daylight==1:nightness=0
 		elif g.battle_options.daylight==2:nightness=0.0 if phase<35 else (clampf((phase-35)/10,0,1) if phase<75 else clampf((90-phase)/15,0,1))
 		elif g.battle_options.daylight==3:nightness=1
 	if g.Catalog.MAPS[g.arena].get("night",false):nightness=1
 	var fog_phase=fmod(g.round_time+(g.arena%7)*2,60)
 	var fog_enabled=g.Catalog.MAPS[g.arena].get("fog",false)
-	if g.mode in [1,2] and g.battle_options.fog>0:fog_enabled=g.battle_options.fog==2
+	if g.mode==2 and g.battle_options.fog>0:fog_enabled=g.battle_options.fog==2
 	wind=fog_enabled and fog_phase>=50
 	fog_strength=clampf(minf((fog_phase-18)/4,(50-fog_phase)/5),0,1)
 	if not fog_enabled:fog_strength=0

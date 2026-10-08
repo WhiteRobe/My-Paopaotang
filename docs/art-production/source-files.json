@@ -445,5 +445,10 @@
     "name": "shelters-v480",
     "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-a6ab3057-9de7-4b6a-a084-a929ca766657.png",
     "resource": "assets/art/maps/decorations/shelters-v480.png"
+  },
+  {
+    "name": "race-v490",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-ab539ee8-be0c-430f-9369-c64416668f5e.png",
+    "resource": "assets/art/maps/racing/race-v490.png"
   }
 ]

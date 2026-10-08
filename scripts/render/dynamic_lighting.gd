@@ -14,7 +14,7 @@ func light(data,colors,pos,radius,color,strength=1.0):
 	if data.size()>=40:return
 	data.append(Vector4(pos.x/g.W,pos.y/g.H,radius,strength));colors.append(Vector4(color.r,color.g,color.b,1))
 func update(dt):
-	overlay.visible=enabled and g.state in ["play","finale","result"]
+	overlay.visible=enabled and g.mode!=1 and g.state in ["play","finale","result"]
 	if not overlay.visible:return
 	overlay.position=-g.camera*g.TILE+Vector2(sin(g.elapsed*83),cos(g.elapsed*71))*g.shake
 	if blocker_image.get_width()!=g.W or blocker_image.get_height()!=g.H:
