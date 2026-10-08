@@ -840,10 +840,10 @@ func update_game(dt):
 		var dir=Vector2.ZERO
 		if p.bot:
 			if p.think<=0:
-				p.think=[.28,.14,.08][difficulty]
+				p.think=[.12,.08,.05][difficulty] if mode==1 and p.car else [.28,.14,.08][difficulty]
 				p.ai_dir=racing.bot_direction(p,danger) if mode==1 else bot_direction(p,danger)
 				if mode!=1:bot_actions(p,danger)
-				elif not p.car or (difficulty>0 and bombs.size()<12 and rng.randf()<.015):bot_actions(p,danger)
+				else:racing.bot_actions(p,danger)
 			dir=Vector2(p.ai_dir)
 			# Bot routes still use tile centres, but position and collision are continuous.
 			if dir.x!=0:dir.y=clampf(roundf(p.visual.y)-p.visual.y,-.8,.8)*4
@@ -2142,7 +2142,7 @@ func mini_board(pos,step=8):
 	if arena>=Racing.FIRST_MAP:
 		for i in range(racing.checkpoints.size()):
 			var cp=racing.checkpoints[i];var side=Vector2(-cp.dir.y,cp.dir.x)
-			canvas.draw_line(pos+(cp.pos-side*3)*step,pos+(cp.pos+side*3)*step,Color("ffe3a8") if i==0 else Color("7ce3ff"),maxf(1,step*.6))
+			canvas.draw_line(pos+(cp.pos+Vector2.ONE*.5-side)*step,pos+(cp.pos+Vector2.ONE*.5+side)*step,Color("ffe3a8") if i==0 else Color("7ce3ff"),maxf(1,step*.6))
 
 func page_header(title):
 	rect(Vector2.ZERO,Vector2(640,360),Color(.04,.08,.14,.6))

@@ -11,7 +11,7 @@ func _draw():
 			var previous=g.camera
 			var p=humans[race_view];var extent=get_parent().size/g.TILE
 			g.camera=(p.visual+Vector2(.5,.5)-extent*.5).clamp(Vector2.ZERO,(Vector2(g.W,g.H)-extent).max(Vector2.ZERO))
-			g.racing.view_team=p.team
+			g.racing.view_team=p.team;g.racing.view_player=p.id
 			position=-g.ORIGIN-g.camera*g.TILE
 			g.draw_world()
 			var base=g.ORIGIN+g.camera*g.TILE
@@ -21,11 +21,15 @@ func _draw():
 			if not p.race_finished:
 				var cp=g.racing.checkpoints[p.race_next]
 				var delta=cp.pos-p.visual
-				var middle=base+get_parent().size*.5
-				var at=middle+delta.normalized()*minf(get_parent().size.x,get_parent().size.y)*.34
-				g.canvas.draw_line(at,at+delta.normalized()*7,Color("ffe3a8"),2)
-				g.text_at("CP"+str(p.race_next),at+Vector2(-8,-5),7,Color("ffe3a8"))
-			g.camera=previous;g.racing.view_team=-1
+				var target=g.ORIGIN+(cp.pos+Vector2.ONE*.5)*g.TILE
+				if not Rect2(base,get_parent().size).has_point(target):
+					var actor=g.ORIGIN+(p.visual+Vector2.ONE*.5)*g.TILE
+					var at=actor+delta.normalized()*minf(get_parent().size.x,get_parent().size.y)*.3
+					at=at.clamp(base+Vector2(20,45),base+get_parent().size-Vector2(40,20))
+					g.canvas.draw_polyline(PackedVector2Array([at-delta.normalized().rotated(.6)*6,at,at-delta.normalized().rotated(-.6)*6]),Color("ffe3a8"),2)
+					g.text_at(g.loc("检查点 %d") % p.race_next if p.race_next>0 else g.loc("终点"),at+Vector2(-12,-9),7,Color("ffe3a8"))
+				if p.race_flash>0:g.text_at("检查点通过",base+Vector2(5,40),9,Color("8cf2be"))
+			g.camera=previous;g.racing.view_team=-1;g.racing.view_player=-1
 	else:
 		position=-g.ORIGIN-g.camera*g.TILE
 		g.draw_world()

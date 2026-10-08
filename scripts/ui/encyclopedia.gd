@@ -184,4 +184,4 @@ func draw_preview(entry,frame):
 	if data.race:
 		for i in range(data.checkpoints.size()):
 			var cp=data.checkpoints[i];var side=Vector2(-cp.dir.y,cp.dir.x)
-			g.canvas.draw_line(offset+(cp.pos-side*3)*step,offset+(cp.pos+side*3)*step,Color("ffe3a8") if i==0 else Color("7ce3ff"),maxf(1,step*.6))
+			g.canvas.draw_line(offset+(cp.pos+Vector2.ONE*.5-side)*step,offset+(cp.pos+Vector2.ONE*.5+side)*step,Color("ffe3a8") if i==0 else Color("7ce3ff"),maxf(1,step*.6))

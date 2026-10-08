@@ -16,54 +16,51 @@ var finish_order:Array=[]
 var overtime=0.0
 var views:Array=[]
 var view_team=-1
+var view_player=-1
 var ship=null
 var parcels:Array=[]
 var ship_wait=18.0
 func _init(game):g=game
 func active():return g.mode==1
 func build(index):
-	g.arena=index;g.W=35;g.H=25;g.camera=Vector2.ZERO;g.map_void.clear()
+	g.arena=index;g.W=28;g.H=19;g.camera=Vector2.ZERO;g.map_void.clear()
 	g.grid.clear();g.terrain.clear();g.gates.clear();g.vine_cells.clear();g.gold_boxes.clear()
-	route=[Vector2i(5,5),Vector2i(29,5),Vector2i(29,19),Vector2i(5,19)]
-	if index==45:route=[Vector2i(5,5),Vector2i(29,5),Vector2i(29,12),Vector2i(22,12),Vector2i(22,19),Vector2i(5,19)]
-	elif index==46:route=[Vector2i(5,5),Vector2i(22,5),Vector2i(22,12),Vector2i(29,12),Vector2i(29,19),Vector2i(5,19)]
+	route=[Vector2i(1,1),Vector2i(25,1),Vector2i(25,16),Vector2i(1,16)]
+	if index==45:route=[Vector2i(1,1),Vector2i(25,1),Vector2i(25,8),Vector2i(18,8),Vector2i(18,16),Vector2i(1,16)]
+	elif index==46:route=[Vector2i(1,1),Vector2i(18,1),Vector2i(18,8),Vector2i(25,8),Vector2i(25,16),Vector2i(1,16)]
 	road.clear();checkpoints.clear();stations.clear();station_timers.clear()
 	for i in range(route.size()):
 		var a=route[i];var b=route[(i+1)%route.size()];var dir=(b-a).sign();var c=a
 		while true:
-			for y in range(-1,2):
-				for x in range(-1,2):road[c+Vector2i(x,y)]=true
+			for y in range(2):
+				for x in range(2):road[c+Vector2i(x,y)]=true
 			if c==b:break
 			c+=dir
-		checkpoints.append({"pos":Vector2(a+b)/2,"dir":Vector2(dir)})
-	# A small starting yard gives eight players room to bomb and escape.
+		checkpoints.append({"pos":Vector2(a+b)/2+Vector2.ONE*.5,"dir":Vector2(dir)})
+	# Two starting rows stay on the track; a single inner supply strip replaces the yard.
 	var finish=Vector2i(checkpoints[0].pos)
-	for y in range(3,9):
-		for x in range(finish.x-11,finish.x):road[Vector2i(x,y)]=true
 	for y in range(g.H):
 		var row=[]
 		for x in range(g.W):row.append(0 if road.has(Vector2i(x,y)) else 1)
 		g.grid.append(row)
 	g.SPAWNS=[]
-	for i in range(8):g.SPAWNS.append(finish+Vector2i(-3-int(i/2)*2,-1+(i%2)*2))
-	# Supply alcoves break up the infield; the centre lane remains connected.
+	for i in range(8):g.SPAWNS.append(finish+Vector2i(-2-int(i/2)*2,i%2))
+	# Small supply alcoves sit inside the two-lane circuit.
 	for i in range(route.size()):
 		var a=route[i];var b=route[(i+1)%route.size()];var dir=(b-a).sign();var side=Vector2i(-dir.y,dir.x)
-		for n in range(3,int(g.manhattan(a,b))-2,4):
-			var anchor=a+dir*n
-			for depth in range(2,5):
-				for offset in range(-1,2):
+		for n in range(3,int(g.manhattan(a,b))-2,5):
+			var anchor=a+dir*n+(Vector2i.DOWN if dir.x>0 else Vector2i.RIGHT if dir.y<0 else Vector2i.ZERO)
+			for depth in range(1,3):
+				for offset in range(2):
 					var c=anchor+side*depth+dir*offset
 					if not g.inside(c) or road.has(c):continue
 					g.grid[c.y][c.x]=2 if (depth+offset+n)%3!=0 else 0
-			for sign_value in [-1,1]:
-				var c=anchor+side*sign_value
-				if not checkpoints.any(func(cp):return Vector2(c).distance_to(cp.pos)<2):g.grid[c.y][c.x]=2
-	# Clear spawn exits, and give each opening pair nearby destructible supplies.
+			# Boxes occupy the inner lane only; the outer lane stays usable before bombing.
+			var c=anchor
+			if not checkpoints.any(func(cp):return Vector2(c).distance_to(cp.pos)<2):g.grid[c.y][c.x]=2
 	for c in g.SPAWNS:
 		for d in [Vector2i.ZERO,Vector2i.LEFT,Vector2i.RIGHT]:g.grid[c.y+d.y][c.x+d.x]=0
-		var box=c+Vector2i(0,-1 if c.y<5 else 1)
-		g.grid[box.y][box.x]=2
+		g.grid[3][c.x]=2
 	stations=[route[1],route[-1]]
 	for c in stations:g.grid[c.y][c.x]=0
 	g.crates.setup()
@@ -71,7 +68,7 @@ func setup():
 	finish_order.clear();overtime=0;ship=null;parcels.clear();ship_wait=g.rng.randf_range(15,23)
 	for p in g.players:
 		p.car=false;p.race_lap=0;p.race_next=1;p.race_rank=0;p.race_points=0;p.race_finished=false;p.respawn=0.0
-		p.race_before=p.visual;p.race_checkpoint=p.visual;p.car_heading=Vector2.RIGHT
+		p.race_corner=-1;p.race_attack=0.0;p.race_flash=0.0;p.race_before=p.visual;p.race_checkpoint=p.visual;p.car_heading=Vector2.RIGHT
 		p.facing=Vector2i.RIGHT
 	for c in stations:station_timers[c]=12.0
 func reset_air():
@@ -106,6 +103,7 @@ func update(dt):
 			if g.grid[c.y][c.x]==0 and not g.drops.has(c) and g.bomb_at(c)==null:g.drops[c]=31
 			station_timers[c]=30.0
 	for p in g.players:
+		p.race_flash=maxf(0,p.race_flash-dt);p.race_attack=maxf(0,p.race_attack-dt)
 		if p.race_finished:continue
 		if p.dead:
 			p.respawn-=dt
@@ -115,7 +113,9 @@ func update(dt):
 		var before=(p.race_before-cp.pos).dot(cp.dir)
 		var after=(p.visual-cp.pos).dot(cp.dir)
 		var side=Vector2(-cp.dir.y,cp.dir.x)
-		if p.car and before<0 and after>=0 and absf((p.visual-cp.pos).dot(side))<=1.4:
+		var crossing=p.race_before.lerp(p.visual,clampf(-before/(after-before),0,1)) if after>before else p.visual
+		if p.car and before<0 and after>=0 and absf((crossing-cp.pos).dot(side))<=1.0:
+			p.race_corner=-1;p.race_flash=.9;g.sound("pickup")
 			p.race_checkpoint=cp.pos+cp.dir
 			if p.race_next==0:
 				p.race_lap+=1
@@ -147,7 +147,7 @@ func revive(p):
 		if chosen!=null:break
 	if chosen==null:p.respawn=.5;return
 	p.dead=false;p.car=false;p.mount=0;p.trap=0;p.freeze=0;p.slow=0;p.grace=2.5;p.down=0;p.item=0
-	g.teleport(p,chosen);p.race_before=p.visual
+	g.teleport(p,chosen);p.race_before=p.visual;p.race_corner=-1
 func vehicle_velocity(p,dir,dt):
 	var maximum=(6.0 if road.has(p.cell) else 3.4)+p.speed*.12
 	if p.slow>0:maximum*=.55
@@ -172,19 +172,23 @@ func bot_direction(p,danger):
 			if g.drops.has(c):
 				var kind=int(g.drops[c])
 				if kind==31 or (kind in [4,5,7] and not g.growth_full(p,kind)):
-					var value=cost-6 if kind==31 else cost-3
+					var value=cost-12 if kind==31 else cost-3
 					if value<score:best=c;score=value
 			if g.DIRS.any(func(d):return g.inside(c+d) and g.grid[c.y+d.y][c.x+d.x]==2) and cost+2<score:
 				best=c;score=cost+2
 			for d in g.DIRS:
 				var next=c+d
-				if visited.has(next) or danger.has(next) or not g.passable(next,p):continue
+				if visited.has(next) or danger.has(next) or not g.passable(next,p) or not g.can_cross(c,next):continue
 				visited[next]=true;distance[next]=cost+1;queue.append(next)
 		if best!=null:return g.route_direction(p,best,danger)
 	var cp=checkpoints[p.race_next]
-	var corner=Vector2(route[p.race_next]);var goal=cp.pos+cp.dir*.7
+	var corner=Vector2(route[p.race_next])+Vector2.ONE*.5;var goal=cp.pos+cp.dir*1.1
+	# Recover a missed gate from its approach side instead of circling beyond it forever.
+	if (p.visual-cp.pos).dot(cp.dir)>=0:goal=cp.pos-cp.dir*1.1
 	var previous=checkpoints[posmod(p.race_next-1,checkpoints.size())]
-	if (p.visual-corner).dot(previous.dir)<-.2:goal=corner
+	if p.race_corner!=p.race_next:
+		if (p.visual-corner).dot(previous.dir)<-.35:goal=corner+previous.dir*.55
+		else:p.race_corner=p.race_next
 	var direction=g.route_direction(p,Vector2i(goal.round()),danger)
 	if direction!=Vector2i.ZERO:return direction
 	var delta=goal-p.visual
@@ -199,26 +203,63 @@ func ordered():
 		if ap!=bp:return ap>bp
 		return a.visual.distance_to(checkpoints[a.race_next].pos)<b.visual.distance_to(checkpoints[b.race_next].pos))
 	return list
+func bot_actions(p,danger):
+	# Space attacks out so racers can escape their own bombs and keep progressing.
+	if p.race_attack>0 or danger.has(p.cell):return
+	var supplies=not p.car and g.DIRS.any(func(d):return g.inside(p.cell+d) and g.grid[p.cell.y+d.y][p.cell.x+d.x]==2)
+	var blocked=p.car and p.ai_dir!=Vector2i.ZERO and not g.passable(p.cell+p.ai_dir,p)
+	var rival=p.car and g.difficulty>0 and g.players.any(func(other):return not other.dead and not other.race_finished and other.team!=p.team and g.manhattan(p.cell,other.cell)<=mini(2,p.range) and (other.visual-p.visual).dot(p.car_heading)>.5)
+	if not supplies and not blocked and not rival and p.item==0:return
+	var count=g.bombs.size()
+	g.bot_actions(p,danger)
+	if g.bombs.size()>count:p.race_attack=3.0 if supplies or blocked else 8.0 if g.difficulty==1 else 5.0
 func draw_ground():
 	for i in range(route.size()):
-		var a=Vector2(route[i]);var b=Vector2(route[(i+1)%route.size()]);var dir=(b-a).normalized()
+		var a=Vector2(route[i])+Vector2.ONE*.5;var b=Vector2(route[(i+1)%route.size()])+Vector2.ONE*.5;var dir=(b-a).normalized()
 		for n in range(2,int(a.distance_to(b))-1,4):
-			var at=g.ORIGIN+(a+dir*n)*g.TILE
-			g.canvas.draw_line(at,at+dir*18,Color(.91,.91,.78,.5),1.2)
+			var at=g.ORIGIN+(a+dir*n+Vector2.ONE*.5)*g.TILE
+			g.canvas.draw_line(at,at+dir*10,Color(.91,.91,.78,.5),1.2)
+	var viewer=null
+	for p in g.players:
+		if not p.bot and (view_team<0 or p.team==view_team):viewer=p;break
+	# Each split follows its own player, including teammates on different checkpoints.
+	if view_player>=0:viewer=g.players[view_player]
 	for i in range(checkpoints.size()):
-		var cp=checkpoints[i];var pos=g.ORIGIN+cp.pos*g.TILE
-		var side=Vector2(-cp.dir.y,cp.dir.x)
-		for n in range(-1,2):
-			var at=pos+side*n*g.TILE
-			g.rect(at-Vector2(7,7),Vector2(14,14),Color(.8,.94,1,.12) if i else Color(.98,.95,.8,.3))
-			if i==0:
-				for k in range(4):g.rect(at-Vector2(7,7)+Vector2(k%2,int(k/2))*7,Vector2(7,7),Color("e7e9dd") if (k%2+int(k/2)+n)%2==0 else Color("203443"))
-		g.text_at("终点" if i==0 else str(i),pos-side*2.5*g.TILE,9,Color("ffe3a8"))
+		var cp=checkpoints[i];var pos=g.ORIGIN+(cp.pos+Vector2.ONE*.5)*g.TILE
+		var side=Vector2(-cp.dir.y,cp.dir.x);var next=viewer!=null and not viewer.race_finished and viewer.race_next==i
+		var color=Color("ffe08e") if i==0 or next else Color("66dfff")
+		g.canvas.draw_line(pos-side*g.TILE,pos+side*g.TILE,Color(.04,.11,.18,.85),7)
+		for n in range(8):
+			var at=pos+side*(n-3.5)*4
+			g.canvas.draw_line(at-cp.dir*2,at+cp.dir*2,color if n%2==0 else Color("203443"),4)
+		if next:
+			g.canvas.draw_line(pos-side*g.TILE,pos+side*g.TILE,Color(color, .45+.3*sin(g.elapsed*5)),2)
+			for n in range(3):
+				var at=pos-cp.dir*(10+fposmod(g.elapsed*12+n*9,27))
+				g.canvas.draw_polyline(PackedVector2Array([at-cp.dir*3-side*3,at,at-cp.dir*3+side*3]),color,1.5)
 		for sign_value in [-1,1]:
-			g.hd.sprite(ART,7 if i==0 else 11,pos+side*sign_value*1.8*g.TILE-Vector2(7,12),Vector2(14,19))
+			g.hd.sprite(ART,7 if i==0 else 11,pos+side*sign_value*1.25*g.TILE-Vector2(5,9),Vector2(10,14))
 	for c in stations:
 		g.hd.sprite(ART,6,g.center(c)-Vector2(9,7),Vector2(18,16))
+func draw_checkpoint_labels():
+	var viewer=g.players[view_player] if view_player>=0 else null
+	for i in range(checkpoints.size()):
+		var cp=checkpoints[i];var pos=g.ORIGIN+(cp.pos+Vector2.ONE*.5)*g.TILE
+		var next=viewer!=null and not viewer.race_finished and viewer.race_next==i
+		var color=Color("ffe08e") if i==0 or next else Color("66dfff")
+		var label=g.loc("终点") if i==0 else g.loc("检查点 %d") % i
+		if next:label=g.loc("下一检查点 %d") % i if i>0 else g.loc("下一站：终点")
+		var width=76 if next else 54
+		var side=Vector2(-cp.dir.y,cp.dir.x)
+		var at=pos+side*(g.TILE+10+(width*.5 if side.x!=0 else 0))-Vector2(width*.5,6)
+		if view_player>=0:
+			var base=g.ORIGIN+g.camera*g.TILE;var extent=g.canvas.get_parent().size
+			if not Rect2(base,extent).has_point(pos):continue
+			at=at.clamp(base+Vector2(2,31),base+extent-Vector2(width+2,14))
+		g.rect(at,Vector2(width,12),Color(.04,.11,.18,.82))
+		g.text_at(label,at+Vector2(3,9),7,color,width-6)
 func draw_air():
+	if active():draw_checkpoint_labels()
 	if not g.hd.regions.has(ART):return
 	if ship!=null:
 		var at=g.ORIGIN+Vector2(ship.x,ship.y)*g.TILE

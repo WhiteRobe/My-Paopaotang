@@ -858,5 +858,10 @@
   "%d 秒": "%d Sekunden",
   "%d 圈 · %d 秒 · 分屏竞速": "%d Runden · %ds · Geteilter Bildschirm",
   "第 %d 名 · %d 分": "Platz %d · %d Punkte",
-  "泡泡%d · 水柱%d · 速度%d": "Blasen %d · Reichweite %d · Tempo %d"
+  "泡泡%d · 水柱%d · 速度%d": "Blasen %d · Reichweite %d · Tempo %d",
+  "检查点 %d": "Kontrollpunkt %d",
+  "下一检查点 %d": "Nächster Kontrollpunkt %d",
+  "下一站：终点": "Nächstes Ziel: Ziellinie",
+  "检查点通过": "Kontrollpunkt passiert",
+  "泡泡糖 · 像素群岛大冒险 · v4.9.2": "Bubblegum · Pixelinseln-Abenteuer · v4.9.2"
 }

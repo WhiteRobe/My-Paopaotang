@@ -858,5 +858,10 @@
   "%d 秒": "%d seconds",
   "%d 圈 · %d 秒 · 分屏竞速": "%d laps · %ds · Split screen",
   "第 %d 名 · %d 分": "Place %d · %d points",
-  "泡泡%d · 水柱%d · 速度%d": "Bubbles %d · Range %d · Speed %d"
+  "泡泡%d · 水柱%d · 速度%d": "Bubbles %d · Range %d · Speed %d",
+  "检查点 %d": "Checkpoint %d",
+  "下一检查点 %d": "Next checkpoint %d",
+  "下一站：终点": "Next: Finish",
+  "检查点通过": "Checkpoint passed",
+  "泡泡糖 · 像素群岛大冒险 · v4.9.2": "Bubblegum · Pixel Islands Adventure · v4.9.2"
 }

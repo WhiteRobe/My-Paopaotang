@@ -858,5 +858,10 @@
   "%d 秒": "%d secondes",
   "%d 圈 · %d 秒 · 分屏竞速": "%d tours · %ds · Écran partagé",
   "第 %d 名 · %d 分": "Place %d · %d points",
-  "泡泡%d · 水柱%d · 速度%d": "Bulles %d · Portée %d · Vitesse %d"
+  "泡泡%d · 水柱%d · 速度%d": "Bulles %d · Portée %d · Vitesse %d",
+  "检查点 %d": "Point de contrôle %d",
+  "下一检查点 %d": "Prochain point %d",
+  "下一站：终点": "Prochain : arrivée",
+  "检查点通过": "Point de contrôle passé",
+  "泡泡糖 · 像素群岛大冒险 · v4.9.2": "Bubblegum · Aventure des îles pixel · v4.9.2"
 }
