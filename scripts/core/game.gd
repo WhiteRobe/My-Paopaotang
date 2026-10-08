@@ -792,7 +792,7 @@ func _process(dt):
 	if state=="play":
 		if countdown>0:
 			countdown-=dt
-			if countdown<=0:play_round_music("urgent" if clock_time<=30 else "theme")
+			if countdown<=0:update_music(0)
 		else: update_game(minf(dt,.08))
 	for p in particles:
 		p.life-=dt
@@ -805,7 +805,6 @@ func update_game(dt):
 	update_camera(dt)
 	round_time+=dt
 	clock_time-=dt
-	if clock_time<=30:play_round_music("urgent")
 	weather.update(dt)
 	for effect in pickup_effects:effect.life-=dt
 	pickup_effects=pickup_effects.filter(func(effect):return effect.life>0)
@@ -1038,7 +1037,11 @@ func damage_player(p,owner):
 	p.recoil=Vector2(p.facing)*-1
 	if owner>=0 and owner<players.size() and players[owner].cell!=p.cell:p.recoil=Vector2(p.cell-players[owner].cell).normalized()
 	world_fx.impact(center(p.cell),0,26)
-	if p.shield>0:
+	if p.get("car",false):
+		p.car=false;p.velocity=Vector2.ZERO;p.momentum=0;p.drift=Vector2.ZERO;p.motion_dir=Vector2i.ZERO;p.grace=1
+		burst(center(p.cell),Color("ffc76e"),20)
+		sound("splash")
+	elif p.shield>0:
 		p.shield=0;p.grace=1
 		burst(center(p.cell),Color("e8ffe4"),12)
 	elif p.mount>0:
@@ -2067,7 +2070,7 @@ func draw_actor(pos,p):
 
 	draw_bubble_break(pos,p)
 	var tag=Vector2(pos.x-9,pos.y-27)
-	rect(tag,Vector2(18,7),COLORS[p.id].darkened(.65));rect(tag,Vector2(2,7),color)
+	rect(tag,Vector2(18,7),color_for(p).darkened(.65));rect(tag,Vector2(2,7),color)
 	text_at(("B" if p.bot else "P")+str(p.id+1),tag+Vector2(3,6),7,Color.WHITE)
 
 func draw_bubble_break(pos,p):
@@ -2083,7 +2086,7 @@ func draw_hud():
 		var p=players[i];var pos=Vector2(5+i*79,16);var color=color_for(p)
 		panel(pos,Vector2(76,29),color);rect(pos+Vector2(2,2),Vector2(2,25),color)
 		face_portrait(pos+Vector2(5,2),p.character,Vector2(12,12),p.id)
-		text_at(("B" if p.bot else "P")+str(i+1),pos+Vector2(20,11),9,COLORS[p.id])
+		text_at(("B" if p.bot else "P")+str(i+1),pos+Vector2(20,11),9,color_for(p))
 		if p.item>0:item_icon(pos+Vector2(58,2),p.item,13)
 		text_at("出局" if p.dead else ("被困" if p.trap>0 else loc("泡%d 水%d 速%d") % [p.capacity,p.range,p.speed]),pos+Vector2(6,24),8,Color("8796a6") if p.dead else CREAM,66)
 
@@ -2096,7 +2099,7 @@ func draw_pve_minimap():
 	for o in adventure.objects:
 		if not o.active:rect(pos+Vector2(o.cell)*step-Vector2.ONE,Vector2(2,2),Color("ffda70"))
 	for p in players:
-		if not p.dead:rect(pos+p.visual*step-Vector2.ONE,Vector2(2,2),COLORS[p.id])
+		if not p.dead:rect(pos+p.visual*step-Vector2.ONE,Vector2(2,2),color_for(p))
 	canvas.draw_rect(Rect2(pos+camera*step,VIEW_SIZE*step),Color("d4eff2"),false,.5)
 	text_at(["轻松","标准","挑战"][difficulty],Vector2(459,37),9,CREAM,73)
 
@@ -2372,8 +2375,8 @@ func draw_world():
 		if concealed(p) and p.team==(racing.view_team if racing.view_team>=0 else primary_player().team):
 			var at=ORIGIN+p.visual*TILE+Vector2(8,8)
 			hero_sprite(at-Vector2(9,15),p.character,Vector2(18,20),0,0,Color(.65,.87,1,.28),false,-1,p.id)
-			canvas.draw_arc(at+Vector2(0,5),6,0,TAU,24,Color(COLORS[p.id],.5),.8)
-			text_at(("B" if p.bot else "P")+str(p.id+1),at+Vector2(-6,-16),7,Color(COLORS[p.id],.5))
+			canvas.draw_arc(at+Vector2(0,5),6,0,TAU,24,Color(color_for(p),.5),.8)
+			text_at(("B" if p.bot else "P")+str(p.id+1),at+Vector2(-6,-16),7,Color(color_for(p),.5))
 	draw_laser_emitters()
 	if mode==3:adventure.draw_skill_travel()
 	for f in blasts:draw_splash(f)
@@ -2448,7 +2451,7 @@ func draw_pickup_prompts():
 		var c=nearby_active(p)
 		if c==null:continue
 		if not prompts.has(c):prompts[c]=[]
-		prompts[c].append({"label":PICKUP_LABELS[p.control],"color":COLORS[p.id]})
+		prompts[c].append({"label":PICKUP_LABELS[p.control],"color":color_for(p)})
 	for c in prompts:
 		var total=prompts[c].size()*9.0
 		var pos=center(c)+Vector2(-total/2,-16+sin(elapsed*3)*.3)
@@ -2479,7 +2482,7 @@ func draw_finale_actor(pos,p):
 			var at=pos+Vector2((i-1)*10,-27-fmod(t*11+i*7,17))
 			canvas.draw_line(at-Vector2(2,0),at+Vector2(2,0),Color(1,.87,.4,.65),1)
 			canvas.draw_line(at-Vector2(0,2),at+Vector2(0,2),Color(1,.87,.4,.65),1)
-	text_at(("B" if p.bot else "P")+str(p.id+1),pos+Vector2(-7,-31-rise),8,COLORS[p.id])
+	text_at(("B" if p.bot else "P")+str(p.id+1),pos+Vector2(-7,-31-rise),8,color_for(p))
 
 func safe_route_distance(p,target,danger):
 	var queue=[{"cell":p.cell,"depth":0}]

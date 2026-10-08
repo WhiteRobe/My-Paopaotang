@@ -11,10 +11,11 @@ func texture_for(id,portrait,texture,region,body_fraction=1.0,omissions=[],ridin
 		g.add_child(viewport)
 		var sprite=Sprite2D.new();sprite.centered=false;sprite.region_enabled=true
 		var material=ShaderMaterial.new();material.shader=preload("res://assets/shaders/hero_palette.gdshader")
-		material.set_shader_parameter("theme_color",g.COLORS[id])
 		sprite.material=material;viewport.add_child(sprite)
 		renders[key]={"viewport":viewport,"sprite":sprite,"material":material}
 	var render=renders[key]
+	var team=g.players[id].team if g.state in ["play","pause","finale","result"] and id<g.players.size() else g.slot_team(id)
+	render.material.set_shader_parameter("theme_color",g.COLORS[posmod(team,8)])
 	render.sprite.texture=texture;render.sprite.region_rect=region
 	render.sprite.scale=Vector2(192,192)/region.size
 	render.material.set_shader_parameter("region_uv",Vector4(region.position.x/texture.get_width(),region.position.y/texture.get_height(),region.size.x/texture.get_width(),region.size.y/texture.get_height()))

@@ -443,7 +443,7 @@ func draw_confirmation():
 	g.button(Vector2(145,243),Vector2(155,32),"取消",confirmation==0)
 	g.button(Vector2(335,243),Vector2(155,32),"确认恢复" if pending=="restore" else "备份并重置",confirmation==1)
 func draw_about():
-	heading("制作与版本","泡泡糖 · 像素群岛大冒险 · v4.9.5")
+	heading("制作与版本","泡泡糖 · 像素群岛大冒险 · v4.9.6")
 	card(Vector2(55,77),Vector2(530,237))
 	g.hero_sprite(Vector2(75,119),7,Vector2(110,145),0,0)
 	g.text_at("像素群岛，等你来冒险",Vector2(220,112),24,Color("ffe3ac"),340)

@@ -320,8 +320,12 @@ func draw_car(pos,p,tint):
 	if p.grace>0:tint.a=.6+.4*sin(g.elapsed*22)
 	var direction=0 if p.facing==Vector2i.DOWN else 1 if p.facing==Vector2i.UP else 2 if p.facing==Vector2i.LEFT else 3
 	var frame=int(g.elapsed*6)%4 if p.race_finished else int(p.gait*2)%4 if p.move<1 else 0
+	g.canvas.draw_set_transform(pos+Vector2(0,5),0,Vector2(1,.35))
+	g.canvas.draw_circle(Vector2.ZERO,12,Color(.05,.09,.15,.3*tint.a))
+	g.canvas.draw_arc(Vector2.ZERO,13,0,TAU,32,Color(g.color_for(p),.85*tint.a),1.4)
+	g.canvas.draw_set_transform(Vector2(sin(g.elapsed*83),cos(g.elapsed*71))*g.shake)
 	g.hd.riding_sprite(pos,p,4,direction,frame,tint)
-	g.text_at(("B" if p.bot else "P")+str(p.id+1),pos+Vector2(-7,-24),7,g.COLORS[p.id])
+	g.text_at(("B" if p.bot else "P")+str(p.id+1),pos+Vector2(-7,-24),7,g.color_for(p))
 	if p.reverse_time>0:g.item_icon(pos+Vector2(-5,-38),30,10)
 	if p.shield>0:g.canvas.draw_arc(pos+Vector2(0,-5),17,g.elapsed*1.5,g.elapsed*1.5+TAU*.8,32,Color("b3ffe0"),1)
 	if p.freeze>0:g.rect(pos+Vector2(-15,-24),Vector2(30,32),Color(.67,.88,1,.16))
@@ -357,7 +361,7 @@ func draw_hud():
 	var list=ordered()
 	for i in range(list.size()):
 		var p=list[i];var at=Vector2(462,80+i*28)
-		g.text_at(str(i+1)+". "+("B" if p.bot else "P")+str(p.id+1)+" · "+g.team_name(p.team),at,9,g.COLORS[p.team])
+		g.text_at(str(i+1)+". "+("B" if p.bot else "P")+str(p.id+1)+" · "+g.team_name(p.team),at,9,g.color_for(p))
 		var label=(g.loc("%d 分") % p.race_points) if p.race_finished else (g.loc("复活 %d 秒") % ceili(p.respawn)) if p.dead else (g.loc("%d/%d 圈 · CP%d") % [p.race_lap,laps,p.race_next])
 		g.text_at(label,at+Vector2(0,10),7,g.CREAM)
 		g.text_at(g.loc("泡泡%d · 水柱%d · 速度%d") % [p.capacity,p.range,p.speed],at+Vector2(0,20),6,Color("acd5df"))
