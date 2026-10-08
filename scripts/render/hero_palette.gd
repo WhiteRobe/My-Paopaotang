@@ -2,8 +2,8 @@ extends RefCounted
 var g
 var renders={}
 func _init(game):g=game
-func texture_for(id,portrait,texture,region,body_fraction=1.0,omissions=[]):
-	var key=id+8 if portrait else id
+func texture_for(id,portrait,texture,region,body_fraction=1.0,omissions=[],riding=false):
+	var key=id+16 if riding else id+8 if portrait else id
 	if not renders.has(key):
 		var viewport=SubViewport.new()
 		viewport.size=Vector2i(192,192);viewport.transparent_bg=true;viewport.disable_3d=true
@@ -24,4 +24,5 @@ func texture_for(id,portrait,texture,region,body_fraction=1.0,omissions=[]):
 	while excluded.size()<8:excluded.append(Vector4.ZERO)
 	render.material.set_shader_parameter("excluded_uv",excluded)
 	render.material.set_shader_parameter("body_fraction",body_fraction)
+	render.material.set_shader_parameter("riding",riding)
 	return render.viewport.get_texture()

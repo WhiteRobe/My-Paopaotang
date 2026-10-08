@@ -4,7 +4,7 @@
 
 | 目录 | 工具 |
 | --- | --- |
-| `art/` | `index_atlases.py`：分析在用原图的透明边界，生成分类路径裁切索引，不修改原图 |
+| `art/` | `index_atlases.py`：分析在用原图的透明边界，生成分类路径裁切索引，不修改原图；`index_riding.py` 单独更新完整骑乘图集的行列索引 |
 | `audio/` | `compose_themes.py`、`compose_music_expansion.py`：制作原曲和新增配乐；`create_sfx.py`、`create_bubble_audio.py`、`create_round_audio.py`：制作音效与回合音乐 |
 | `i18n/` | `refresh_translations.py`：联网补充翻译；`polish_locales.py`：维护离线翻译 |
 | `build/` | `build_macos.py` 和 `launcher.c`：构建 macOS 应用 |

@@ -43,10 +43,10 @@ func build(index):
 			c+=dir
 		checkpoints.append({"pos":Vector2(a+b)/2+Vector2.ONE*.5,"dir":Vector2(dir)})
 	if index==46:checkpoints[0].pos=Vector2(19.5,8.5)
-	# Supply bays join the inner lane, leaving the outer lane open for racing.
-	stations=[route[1]+Vector2i.DOWN,route[-1]+Vector2i.RIGHT]
-	if index==45:stations=[Vector2i(21,2),Vector2i(5,16)]
-	elif index==46:stations=[Vector2i(21,9),Vector2i(2,13)]
+	# Supply bays sit off the track and connect to the infield alleys.
+	stations=[Vector2i(24,3),Vector2i(3,8)]
+	if index==45:stations=[Vector2i(21,3),Vector2i(5,15)]
+	elif index==46:stations=[Vector2i(21,10),Vector2i(3,13)]
 	sidings.clear();cover.clear()
 	var links=[ [Vector2i(5,2),Vector2i(5,6)], [Vector2i(10,13),Vector2i(18,13)], [Vector2i(21,2),Vector2i(21,7)] ]
 	var islands=[Vector2i(12,4),Vector2i(3,12),Vector2i(12,13),Vector2i(21,11),Vector2i(23,14)]
@@ -171,7 +171,7 @@ func update(dt):
 func complete(p):
 	if p.race_finished:return
 	p.race_finished=true;p.race_rank=finish_order.size()+1;p.race_points=9-p.race_rank
-	p.velocity=Vector2.ZERO;p.move=1
+	p.velocity=Vector2.ZERO;p.move=1;p.facing=Vector2i.DOWN
 	finish_order.append(p.id);g.sound("win")
 func revive(p):
 	var origin=Vector2i(p.race_checkpoint.round());var danger=g.danger_cells();var chosen=null
@@ -316,10 +316,11 @@ func draw_air():
 		var at=g.center(parcel.cell)-Vector2(0,parcel.time*28)
 		g.hd.sprite(ART,5,at-Vector2(9,20),Vector2(18,24))
 func draw_car(pos,p,tint):
+	if p.race_finished:pos.y-=absf(sin(g.elapsed*6+p.id*.4))*2.5
 	if p.grace>0:tint.a=.6+.4*sin(g.elapsed*22)
 	var direction=0 if p.facing==Vector2i.DOWN else 1 if p.facing==Vector2i.UP else 2 if p.facing==Vector2i.LEFT else 3
-	g.hd.sprite(ART,direction,pos+Vector2(-13,-13),Vector2(26,21),tint)
-	g.hero_sprite(pos+Vector2(-7,-21),p.character,Vector2(14,15),direction,0,tint,true,-1,p.id)
+	var frame=int(g.elapsed*6)%4 if p.race_finished else int(p.gait*2)%4 if p.move<1 else 0
+	g.hd.riding_sprite(pos,p,4,direction,frame,tint)
 	g.text_at(("B" if p.bot else "P")+str(p.id+1),pos+Vector2(-7,-24),7,g.COLORS[p.id])
 	if p.reverse_time>0:g.item_icon(pos+Vector2(-5,-38),30,10)
 	if p.shield>0:g.canvas.draw_arc(pos+Vector2(0,-5),17,g.elapsed*1.5,g.elapsed*1.5+TAU*.8,32,Color("b3ffe0"),1)
@@ -327,6 +328,11 @@ func draw_car(pos,p,tint):
 	if p.trap>0:
 		g.hd.sprite("effects/bubbles-hd.png",7,pos+Vector2(-16,-28),Vector2(32,34))
 		g.text_at(str(snappedf(p.trap,.1)),pos+Vector2(8,9),8,Color("fff3c5"))
+	if p.race_finished:
+		for n in range(4):
+			var at=pos+Vector2((n-1.5)*7,-21-fposmod(g.elapsed*10+n*4,15))
+			g.canvas.draw_line(at-Vector2(1.5,0),at+Vector2(1.5,0),Color(1,.86,.35,.8),1)
+			g.canvas.draw_line(at-Vector2(0,1.5),at+Vector2(0,1.5),Color(1,.86,.35,.8),1)
 	g.draw_bubble_break(pos,p)
 func sync_views():
 	var visible=active() and g.state in ["play","pause","finale","result"]
@@ -340,8 +346,8 @@ func sync_views():
 		views[i].clip.visible=visible and i<humans.size()
 		if not views[i].clip.visible:continue
 		var columns=1 if humans.size()==1 else 2;var rows=2 if humans.size()>2 else 1
-		views[i].clip.position=Vector2(8+(i%columns)*220,70+int(i/columns)*154)
-		views[i].clip.size=Vector2(432 if columns==1 else 212,273 if rows==1 else 119)
+		views[i].clip.position=Vector2(8+(i%columns)*220,43+int(i/columns)*154)
+		views[i].clip.size=Vector2(432 if columns==1 else 212,300 if rows==1 else 146)
 		views[i].canvas.queue_redraw()
 func draw_hud():
 	g.text_at(g.Catalog.MAPS[g.arena].name,Vector2(8,15),12,g.CREAM,260)
@@ -351,15 +357,9 @@ func draw_hud():
 	var list=ordered()
 	for i in range(list.size()):
 		var p=list[i];var at=Vector2(462,80+i*28)
-		g.text_at(str(i+1)+". "+("B" if p.bot else "P")+str(p.id+1)+" · "+(g.loc("队伍 %d") % (p.team+1)),at,10,g.COLORS[p.team])
+		g.text_at(str(i+1)+". "+("B" if p.bot else "P")+str(p.id+1)+" · "+g.team_name(p.team),at,9,g.COLORS[p.team])
 		var label=(g.loc("%d 分") % p.race_points) if p.race_finished else (g.loc("复活 %d 秒") % ceili(p.respawn)) if p.dead else (g.loc("%d/%d 圈 · CP%d") % [p.race_lap,laps,p.race_next])
-		g.text_at(label,at+Vector2(0,12),8,g.CREAM)
+		g.text_at(label,at+Vector2(0,10),7,g.CREAM)
+		g.text_at(g.loc("泡泡%d · 水柱%d · 速度%d") % [p.capacity,p.range,p.speed],at+Vector2(0,20),6,Color("acd5df"))
 	g.text_at("仅驾驶赛车通过检查点有效",Vector2(461,313),8,g.CREAM,165)
 	g.button(Vector2(549,315),Vector2(78,25),"暂停 / 退出")
-	var humans=g.players.filter(func(p):return not p.bot)
-	for i in range(views.size()):
-		if not views[i].clip.visible:continue
-		var p=humans[i];var at=views[i].clip.position-Vector2(0,27)
-		g.rect(at,Vector2(views[i].clip.size.x,25),Color(.04,.1,.16,.85))
-		g.text_at("P"+str(p.id+1)+" · "+str(p.race_lap)+"/"+str(laps)+" "+g.loc("圈")+" · "+str(snappedf(p.velocity.length(),.1)),at+Vector2(4,10),8,g.COLORS[p.id])
-		g.text_at(g.loc("泡泡%d · 水柱%d · 速度%d") % [p.capacity,p.range,p.speed],at+Vector2(4,22),7,Color("acd5df"))

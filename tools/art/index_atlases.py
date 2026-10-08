@@ -106,5 +106,7 @@ for name,(cols,rows) in specs.items():
  report[name]={'size':list(im.size),'cells':len(raw),'minimum_cell':min(min(r[2:4]) for r in raw),'row_cuts':cuts,'alpha_fraction':round(float((np.asarray(im.getchannel('A'))==0).mean()),4)}
 from index_racing import index
 regions=index(regions)
+from index_riding import index as index_riding
+regions=index_riding(regions)
 (R/'atlas-regions.json').write_text(json.dumps(regions,ensure_ascii=False,indent=2)+'\n')
 print(json.dumps(report,ensure_ascii=False,indent=2))

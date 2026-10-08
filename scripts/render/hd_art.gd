@@ -79,3 +79,12 @@ func ambient_frame(name,index,center,size,tint=Color.WHITE):
 	var baseline=animation_baseline(name)
 	var drawn=source.size*minf(size.x/baseline.x,size.y/baseline.y)
 	draw_region(name,index,Rect2(center-drawn/2,drawn),tint)
+
+func riding_sprite(pos,p,kind,direction,frame,tint=Color.WHITE):
+	var name="riding/"+WALK_NAMES[p.character]+"-"+["duck","turtle","rabbit","car"][kind-1]+".png"
+	if not regions.has(name):return false
+	var source=region(name,direction*4+posmod(frame,4));var baseline=animation_baseline(name)
+	var size=Vector2(32,36) if kind!=4 else Vector2(30,29)
+	var drawn=source.size*minf(size.x/baseline.x,size.y/baseline.y)
+	g.canvas.draw_texture_rect(g.hero_palette.texture_for(p.id,false,textures[name],source,1.0,[],true),Rect2(pos+Vector2(-drawn.x*.5,6-drawn.y),drawn),false,tint)
+	return true

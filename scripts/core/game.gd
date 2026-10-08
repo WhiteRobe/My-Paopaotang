@@ -34,6 +34,7 @@ var SPAWNS = [Vector2i(1,1),Vector2i(1,17),Vector2i(1,9),Vector2i(13,1),Vector2i
 const INK = Color("182840")
 const CREAM = Color("fff5d5")
 const COLORS = [Color("62ceff"),Color("ff8bad"),Color("ffe18a"),Color("a8efac"),Color("c3a2ff"),Color("ffad64"),Color("58e1c0"),Color("ed9ee6")]
+const TEAM_NAMES=["青龙队","白虎队","朱雀队","玄武队","麒麟队","凤凰队","苍狼队","玉兔队"]
 const MOVE_KEYS = [[KEY_A,KEY_D,KEY_W,KEY_S],[KEY_LEFT,KEY_RIGHT,KEY_UP,KEY_DOWN],[KEY_J,KEY_L,KEY_I,KEY_K],[KEY_F,KEY_H,KEY_T,KEY_G]]
 const BOMB_KEYS = [KEY_SPACE,KEY_ENTER,KEY_U,KEY_R]
 const ITEM_KEYS = [KEY_Q,KEY_SLASH,KEY_O,KEY_Y]
@@ -104,6 +105,7 @@ var battle_options=BATTLE_OPTIONS.duplicate()
 var round_limit = 150.0
 var pickup_effects: Array = []
 var death_loot:Array=[]
+var loot_flights:Array=[]
 var preview_only=false
 var collapsed_at: Dictionary = {}
 var countdown = 0.0
@@ -393,7 +395,7 @@ func new_round():
 	bombs.clear()
 	blasts.clear()
 	drops.clear()
-	death_loot.clear()
+	death_loot.clear();loot_flights.clear()
 	particles.clear()
 	world_fx.events.clear()
 	world_fx.links.clear()
@@ -778,6 +780,7 @@ func _process(dt):
 	elapsed+=dt
 	if mode==3 and state in ["play","finale","result"]:adventure.update_animation(dt)
 	if state=="finale":
+		update_loot_flights(dt);scatter_growth()
 		finale_time+=dt
 		if finale_time>=3.8:state="result"
 	if state in ["finale","result"]:
@@ -818,6 +821,7 @@ func update_game(dt):
 	map_rules.update(dt)
 	update_mechanisms(dt)
 	var danger=danger_cells()
+	update_loot_flights(dt)
 	scatter_growth()
 	for p in players:
 		for timer in ["hurt","placing","down","pop_time","torch","shield","dash","kick","cloak","magnet","freeze","slow","grace","warp","flow","think","jump","attack","push_cool","reverse_time"]: p[timer]=maxf(0,p[timer]-dt)
@@ -1059,8 +1063,8 @@ func kill_player(p,killer=-1):
 		players[killer].round_kills+=1
 		if players[killer].get("control",killer)==0:stat("kills")
 	p.trap_owner=-1
-	if not p.growth_loot.is_empty():death_loot.append({"origin":p.cell,"items":p.growth_loot.duplicate()});p.growth_loot.clear()
-	p.capacity=p.get("base_capacity",1);p.range=p.get("base_range",1);p.speed=p.get("base_speed",0);p.reverse_time=0;p.jump_travel=0
+	if not p.growth_loot.is_empty():death_loot.append({"origin":p.visual,"items":p.growth_loot.duplicate()});p.growth_loot.clear()
+	p.capacity=p.get("base_capacity",1);p.range=p.get("base_range",1);p.speed=p.get("base_speed",0);p.reverse_time=0;p.jump_travel=0;p.riding=0;p.damage_level=0
 	scatter_growth()
 	p.dead=true;p.trap=0;p.down=1.05;p.pop_time=.55;p.pop_row=0
 	if mode==1:p.respawn=10.0;p.car=false;p.mount=0
@@ -1070,17 +1074,35 @@ func kill_player(p,killer=-1):
 
 func scatter_growth():
 	if death_loot.is_empty():return
-	var danger=danger_cells()
+	var danger=danger_cells();var available=[];var reserved={}
+	for flight in loot_flights:reserved[flight.cell]=true
+	for y in range(H):
+		for x in range(W):
+			var c=Vector2i(x,y)
+			if not map_void.has(c) and grid[y][x]==0 and not reserved.has(c) and bomb_at(c)==null and not drops.has(c) and danger.get(c,99)>1.5:available.append(c)
 	for loot in death_loot:
-		var queue=[loot.origin];var seen={loot.origin:true};var head=0
-		while head<queue.size() and not loot.items.is_empty():
-			var c=queue[head];head+=1
-			if inside(c) and grid[c.y][c.x]==0 and bomb_at(c)==null and not drops.has(c) and danger.get(c,99)>.6:
-				drops[c]=loot.items.pop_front();burst(center(c),Color("a7e6ff"),3)
-			for d in DIRS:
-				var next=c+d
-				if inside(next) and grid[next.y][next.x] in [0,2] and not seen.has(next):seen[next]=true;queue.append(next)
+		while not loot.items.is_empty() and not available.is_empty():
+			var c=available.pop_at(rng.randi_range(0,available.size()-1))
+			loot_flights.append({"origin":Vector2(loot.origin),"cell":c,"kind":loot.items.pop_front(),"age":0.0,"duration":clampf(.65+Vector2(loot.origin).distance_to(Vector2(c))*.025,.7,1.35)})
 	death_loot=death_loot.filter(func(loot):return not loot.items.is_empty())
+
+func update_loot_flights(dt):
+	for flight in loot_flights:
+		flight.age+=dt
+		if flight.age<flight.duration:continue
+		var c=flight.cell
+		if inside(c) and not map_void.has(c) and grid[c.y][c.x]==0 and not drops.has(c) and bomb_at(c)==null and not blasts.any(func(f):return f.cell==c):
+			drops[c]=flight.kind;burst(center(c),Color("a7e6ff"),3)
+		else:death_loot.append({"origin":Vector2(c),"items":[flight.kind]})
+	loot_flights=loot_flights.filter(func(flight):return flight.age<flight.duration)
+
+func draw_loot_flights():
+	for flight in loot_flights:
+		var t=clampf(flight.age/flight.duration,0,1)
+		var origin=ORIGIN+(flight.origin+Vector2.ONE*.5)*TILE
+		var at=origin.lerp(center(flight.cell),t)-Vector2(0,sin(t*PI)*minf(48,18+origin.distance_to(center(flight.cell))*.1))
+		canvas.draw_arc(at,7,elapsed*5,elapsed*5+PI,12,Color(.65,.9,1,.45),1)
+		item_icon(at-Vector2(6,6),flight.kind,12)
 
 func random_drop():
 	if mode==1:
@@ -1117,7 +1139,7 @@ func pickup(p,c,manual=false):
 	if category=="active" and not manual and c!=p.cell and p.item!=0:return
 	var previous=p.item if category=="active" else 0
 	drops.erase(c)
-	if kind in [4,5,7,29,30]:p.growth_loot.append(kind)
+	if kind in [4,5,7,16,28,29,30]:p.growth_loot.append(kind)
 	if previous>0:
 		drops[c]=previous
 		p.pickup_lock=c
@@ -1445,7 +1467,7 @@ func finish_round(winner):
 	if winner<0:result_text="这一局平手"
 	elif mode==3:result_text=("群岛重获新生！" if adventure_stage==20 else "冒险任务完成！") if winner==0 else "冒险暂时受挫"
 	elif mode==0:result_text=("群岛通关！" if campaign_stage==20 else "闯关成功！") if winner==0 else "这次没闯过去"
-	elif mode in [1,2]:result_text=loc("队伍 %d") % (winner+1)+("夺冠！" if match_over else "获胜！")
+	elif mode in [1,2]:result_text=loc("%s夺冠！" if match_over else "%s获胜！") % team_name(winner)
 	else:
 		var champion=players.filter(func(p):return p.team==winner)[0]
 		result_text=Catalog.CHARACTERS[champion.character].name+("夺冠！" if match_over else "获胜！")
@@ -2013,10 +2035,8 @@ func draw_actor(pos,p):
 	canvas.draw_arc(Vector2.ZERO,10 if p.mount>0 else 8,0,TAU,24,Color(color,.65*tint.a),1)
 	canvas.draw_set_transform(Vector2(sin(elapsed*83),cos(elapsed*71))*shake)
 	if p.mount>0:
-		var mount_frame=int((p.steps-1+p.move)*4)%4 if walking else 0
-		hd.mount_sprite(p.mount,direction,pos+Vector2(-15,-19+bob),Vector2(30,24),tint,phase if walking else 0.0)
-		var seated_pose=pose if p.hurt>0 or p.trap>0 or p.placing>0 else 0
-		hero_sprite(pos+Vector2(-9,-29+bob),p.character,Vector2(18,20),direction,seated_pose,tint,true,-1.0,p.id)
+		var mount_frame=int(p.gait*2)%4 if walking else 0
+		hd.riding_sprite(pos+Vector2(0,bob),p,p.mount,direction,mount_frame,tint)
 		health_bar(pos+Vector2(-6,14),p.mount_hp,mount_durability(p),12,2)
 	else:hero_sprite(pos+Vector2(-11,-20+bob),p.character,Vector2(22,25),direction,pose,tint,false,p.gait*6,p.id)
 	if p.hurt>0:
@@ -2228,8 +2248,9 @@ func draw_result():
 	elif mode==0:
 		centered(loc("第%d关 / %s") % [campaign_stage,Catalog.MAPS[arena].name],89,11)
 	else:
-		var label=(loc("队伍积分")+"  "+" / ".join(range(team_count).map(func(team):return (loc("队伍 %d") % (team+1))+" "+str(players.filter(func(p):return p.team==team).reduce(func(total,p):return total+p.race_points,0))))) if mode==1 else "比分  "+" : ".join(scores.slice(0,team_count).map(func(value):return str(value)))
-		centered(label,89,11)
+		for team in range(team_count):
+			var points=players.filter(func(p):return p.team==team).reduce(func(total,p):return total+p.race_points,0) if mode==1 else scores[team]
+			text_at(team_name(team)+"  "+str(points),Vector2(70+(team%4)*128,84+int(team/4)*15),9,COLORS[team],120)
 	for i in range(players.size()):
 		var p=players[i];var pos=Vector2(70+(i%2)*255,115+int(i/2)*38)
 		panel(pos,Vector2(245,34),color_for(p))
@@ -2327,7 +2348,7 @@ func draw_world():
 	depth.sort_custom(func(a,b):return a.y<b.y if not is_equal_approx(a.y,b.y) else a.order<b.order)
 	for entry in depth:
 		match entry.kind:
-			"shelter":hd.sprite("maps/decorations/shelters-v480.png",terrain[entry.data].art,center(entry.data)-Vector2(8,16),Vector2(16,22))
+			"shelter":world_fx.draw_shelter(entry.data)
 			"wall":draw_obstacle(entry.data)
 			"turret":map_rules.draw_turret(entry.data)
 			"lamp":hd.sprite("missions/missions-hd.png",2,center(entry.data)-Vector2(6,8),Vector2(12,14))
@@ -2357,6 +2378,7 @@ func draw_world():
 	if mode==3:adventure.draw_skill_travel()
 	for f in blasts:draw_splash(f)
 
+	draw_loot_flights()
 	for effect in pickup_effects:
 		var progress=1-effect.life/.65
 		item_icon(effect.pos+Vector2(-8,-12-progress*22),effect.kind,16*(1-progress*.35))
@@ -2470,6 +2492,8 @@ func safe_route_distance(p,target,danger):
 			if visited.has(c) or not passable(c,p) or not can_cross(node.cell,c) or danger.has(c):continue
 			visited[c]=true;queue.append({"cell":c,"depth":node.depth+1})
 	return -1
+
+func team_name(team):return loc(TEAM_NAMES[posmod(team,TEAM_NAMES.size())])
 
 func character_name(index):return "随机角色" if index==8 else Catalog.CHARACTERS[index].name
 

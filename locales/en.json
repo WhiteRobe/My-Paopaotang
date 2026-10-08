@@ -865,7 +865,17 @@
   "检查点通过": "Checkpoint passed",
   "泡泡糖 · 像素群岛大冒险 · v4.9.2": "Bubblegum · Pixel Islands Adventure · v4.9.2",
   "泡泡糖 · 像素群岛大冒险 · v4.9.3": "Bubblegum · Pixel Islands Adventure · v4.9.3",
-  "泡泡糖 · 像素群岛大冒险 · v4.9.4": "Bubblegum · Pixel Islands Adventure · v4.9.4",
+  "泡泡糖 · 像素群岛大冒险 · v4.9.5": "Bubblegum · Pixel Islands Adventure · v4.9.5",
   "海港内湾赛道": "Harbor Inlet Circuit",
-  "工厂交叉赛道": "Factory Crossroads Circuit"
+  "工厂交叉赛道": "Factory Crossroads Circuit",
+  "青龙队": "Azure Dragon",
+  "白虎队": "White Tiger",
+  "朱雀队": "Vermilion Bird",
+  "玄武队": "Black Tortoise",
+  "麒麟队": "Qilin",
+  "凤凰队": "Phoenix",
+  "苍狼队": "Gray Wolf",
+  "玉兔队": "Jade Rabbit",
+  "%s获胜！": "%s wins!",
+  "%s夺冠！": "%s are champions!"
 }

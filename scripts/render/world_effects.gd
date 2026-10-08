@@ -206,3 +206,13 @@ func add_shelters(pve=false):
 				for d in g.DIRS:g.grid[at.y+d.y][at.x+d.x]=0
 			total+=points.size()
 	if g.crates:g.crates.prune()
+
+func draw_shelter(c):
+	var art=g.terrain[c].art;var pos=g.center(c)
+	var size=Vector2(24,22) if art in [0,1,2,3,4] else Vector2(26,30)
+	var tint=Color(.86,.92,1) if g.Catalog.MAPS[g.arena].theme in [2,7,12] else Color(.96,.94,.88)
+	var shake=Vector2(sin(g.elapsed*83),cos(g.elapsed*71))*g.shake
+	g.canvas.draw_set_transform(pos+Vector2(0,6)+shake,0,Vector2(1,.28))
+	g.canvas.draw_circle(Vector2.ZERO,10,Color(.05,.09,.12,.24))
+	g.canvas.draw_set_transform(shake)
+	g.hd.sprite("maps/decorations/shelters-v480.png",art,pos+Vector2(-size.x*.5,8-size.y),size,tint)
