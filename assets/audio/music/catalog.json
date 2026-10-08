@@ -320,5 +320,61 @@
     "rms": 0.145,
     "loop_seam": 0.0011,
     "sample_rate": 32000
+  },
+  {
+    "id": "race-harbor",
+    "title": "赛车：白帆冲刺",
+    "scene": "race:harbor",
+    "bpm": 136,
+    "metre": 4,
+    "bars": 64,
+    "seconds": 112.94,
+    "file": "racing/race-harbor.ogg",
+    "peak": 0.78,
+    "rms": 0.1432,
+    "loop_seam": 0.0,
+    "sample_rate": 32000
+  },
+  {
+    "id": "race-forest",
+    "title": "赛车：林间追风",
+    "scene": "race:forest",
+    "bpm": 142,
+    "metre": 4,
+    "bars": 64,
+    "seconds": 108.17,
+    "file": "racing/race-forest.ogg",
+    "peak": 0.7334,
+    "rms": 0.145,
+    "loop_seam": 0.0,
+    "sample_rate": 32000
+  },
+  {
+    "id": "race-factory",
+    "title": "赛车：齿轮疾驰",
+    "scene": "race:factory",
+    "bpm": 148,
+    "metre": 4,
+    "bars": 64,
+    "seconds": 103.78,
+    "file": "racing/race-factory.ogg",
+    "peak": 0.7095,
+    "rms": 0.145,
+    "loop_seam": 0.0,
+    "sample_rate": 32000
+  },
+  {
+    "id": "race-sprint",
+    "title": "赛车：最后冲线",
+    "scene": "race:sprint",
+    "bpm": 164,
+    "metre": 4,
+    "bars": 24,
+    "seconds": 35.12,
+    "file": "racing/race-sprint.ogg",
+    "peak": 0.674,
+    "rms": 0.145,
+    "loop_seam": 0.0,
+    "sample_rate": 32000
   }
 ]

@@ -278,7 +278,10 @@ func play_theme(theme_index):
 	switch_music("res://assets/audio/music/variations/"+name+"-alt.ogg" if variant else "res://assets/audio/music/themes/"+name+".ogg")
 
 func play_game_music():
-	if mode==3 and adventure.stage.get("mission","")=="boss" and not adventure.boss_dead and state in ["play","pause"]:
+	if mode==1:
+		round_music="racing"
+		switch_music("res://assets/audio/music/racing/race-"+["harbor","forest","factory"][arena-Racing.FIRST_MAP]+".ogg")
+	elif mode==3 and adventure.stage.get("mission","")=="boss" and not adventure.boss_dead and state in ["play","pause"]:
 		current_theme=Catalog.THEMES[Catalog.MAPS[arena].theme];round_music="boss"
 		switch_music("res://assets/audio/music/boss/boss-"+["swamp","ruins","reef","sky","citadel"][adventure.stage.chapter]+".ogg")
 	else:play_theme(Catalog.MAPS[arena].theme)
@@ -300,6 +303,8 @@ func update_music(dt):
 	var page=pause_return if state=="pause" else state
 	if page=="play":
 		if countdown>0:play_round_music("ready")
+		elif clock_time<=30 and mode==1:
+			round_music="race-sprint";switch_music("res://assets/audio/music/racing/race-sprint.ogg")
 		elif clock_time<=30:play_round_music("urgent")
 		else:play_game_music()
 	elif page=="finale":play_round_music("victory" if result_winner>=0 and result_winner==primary_player().team else "defeat")
@@ -1080,8 +1085,8 @@ func scatter_growth():
 func random_drop():
 	if mode==1:
 		var race_roll=rng.randf()
-		if race_roll<.18:return 31
-		if race_roll<.78:return [4,5,7][rng.randi_range(0,2)]
+		if race_roll<.35:return 31
+		if race_roll<.90:return [4,5,7][rng.randi_range(0,2)]
 	var rare=rng.randf()
 	if rare<.01:return 29
 	if rare<.02:return 30
@@ -1433,7 +1438,7 @@ func finish_round(winner):
 		p.hurt=0;p.placing=0;p.jump_travel=0;p.jump=0
 	if mode==1:
 		for p in players:
-			p.visual=racing.checkpoints[0].pos+Vector2(-3+(p.id%4)*2,-2+int(p.id/4)*3);p.cell=Vector2i(p.visual.round())
+			p.visual=racing.checkpoints[0].pos+Vector2(-3+(p.id%4)*2,-.5+int(p.id/4));p.cell=Vector2i(p.visual.round())
 	result_winner=winner
 	if winner>=0:scores[winner]+=1
 	match_over=mode in [0,1,3] or (winner>=0 and scores[winner]>=2)
@@ -1828,14 +1833,7 @@ func _draw():
 func draw_tile(c):
 	if map_void.has(c):return
 	if arena>=44:
-		var pos=ORIGIN+Vector2(c)*TILE
-		rect(pos,Vector2(TILE,TILE),Color("52616a") if grid[c.y][c.x] in [0,2] else Color("6d956b"))
-		if grid[c.y][c.x]==1:hd.sprite(Racing.ART,9,pos,Vector2(TILE,TILE),Color(1,1,1,.65),false)
-		if grid[c.y][c.x]==1 and DIRS.any(func(d):return inside(c+d) and grid[c.y+d.y][c.x+d.x] in [0,2]):
-			rect(pos,Vector2(TILE,TILE),Color("617c6b"))
-			rect(pos+Vector2(1,1),Vector2(14,3),Color("e8d7bf") if (c.x+c.y)%2 else Color("a94e48"))
-		if grid[c.y][c.x] in [0,2] and (c.x*7+c.y*11)%5==0:rect(pos+Vector2(3+(c.y%7),4+(c.x%7)),Vector2(1,1),Color("61717b"))
-		return
+		racing.draw_tile(c);return
 	var theme=Catalog.MAPS[arena].theme
 	var pos=ORIGIN+Vector2(c)*TILE
 	var cell=grid[c.y][c.x]
@@ -2131,7 +2129,10 @@ func mini_board(pos,step=8):
 		for x in range(W):
 			var cell=grid[y][x]
 			var kind=2 if cell==1 else (3 if cell==2 else (x+y)%2)
-			if arena>=Racing.FIRST_MAP:rect(pos+Vector2(x,y)*step,Vector2.ONE*step,Color("537e56") if cell==1 else Color("aa744b") if cell==2 else Color("77888d"))
+			if arena>=Racing.FIRST_MAP:
+				var tile=0 if racing.road.has(Vector2i(x,y)) else 2 if cell==1 else 1
+				hd.sprite(Racing.GROUND,(arena-Racing.FIRST_MAP)*3+tile,pos+Vector2(x,y)*step,Vector2.ONE*step,Color.WHITE,false)
+				if cell==2:rect(pos+Vector2(x,y)*step,Vector2.ONE*step,Color(.55,.34,.18,.7))
 			else:hd.theme_sprite(theme,kind,pos+Vector2(x,y)*step,Vector2(step,step),Color.WHITE,false)
 	for c in terrain:
 		var type=terrain[c].type

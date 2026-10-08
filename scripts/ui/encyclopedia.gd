@@ -157,7 +157,7 @@ func preview(entry):
 	if entry.category==7:
 		for i in range(4):board.players.append({"id":i,"bot":false,"cell":board.SPAWNS[i],"visual":Vector2(board.SPAWNS[i])})
 		board.adventure.setup();board.world_fx.design_board(true);board.crates.setup();board.world_fx.add_shelters(true)
-	var data={"grid":board.grid.duplicate(true),"void":board.map_void.duplicate(),"terrain":board.terrain.duplicate(true),"W":board.W,"H":board.H,"theme":board.Catalog.MAPS[board.arena].theme,"race":board.arena>=g.Racing.FIRST_MAP,"checkpoints":board.racing.checkpoints.duplicate(true)}
+	var data={"grid":board.grid.duplicate(true),"void":board.map_void.duplicate(),"terrain":board.terrain.duplicate(true),"W":board.W,"H":board.H,"theme":board.Catalog.MAPS[board.arena].theme,"race":board.arena>=g.Racing.FIRST_MAP,"race_theme":board.arena-g.Racing.FIRST_MAP,"road":board.racing.road.duplicate(),"checkpoints":board.racing.checkpoints.duplicate(true)}
 	previews[key]=data
 	board.map_rules=null;board.world_fx=null;board.crates=null;board.adventure=null;board.racing=null;board.free()
 	return data
@@ -172,7 +172,10 @@ func draw_preview(entry,frame):
 			if data.void.has(c):continue
 			var cell=data.grid[y][x]
 			var kind=2 if cell==1 else 3 if cell==2 else (x+y)%2
-			if data.race:g.rect(offset+Vector2(c)*step,Vector2.ONE*step,Color("537e56") if cell==1 else Color("aa744b") if cell==2 else Color("77888d"))
+			if data.race:
+				var tile=0 if data.road.has(c) else 2 if cell==1 else 1
+				g.hd.sprite(g.Racing.GROUND,data.race_theme*3+tile,offset+Vector2(c)*step,Vector2.ONE*step,Color.WHITE,false)
+				if cell==2:g.rect(offset+Vector2(c)*step,Vector2.ONE*step,Color(.55,.34,.18,.7))
 			else:g.hd.theme_sprite(data.theme,kind,offset+Vector2(c)*step,Vector2.ONE*step,Color.WHITE,false)
 	for c in data.terrain:
 		var type=data.terrain[c].type

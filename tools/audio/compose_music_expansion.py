@@ -41,7 +41,7 @@ def compose(spec):
     beat=60/bpm;duration=bars*metre*beat
     mix=np.zeros((round(duration*SR),2),np.float32)
     rng=np.random.default_rng(476+sum(map(ord,ident)))
-    scale=SCALES[mode];boss=scene.startswith('boss:')
+    scale=SCALES[mode];boss=scene.startswith('boss:');race=scene.startswith('race:')
     def pitch(degree,octave=0):return tonic+scale[degree%7]+12*(degree//7+octave)
     def place(start,signal,pan=0):
         at=round(start*SR)%len(mix)
@@ -88,7 +88,7 @@ def compose(spec):
         lead_gain=.17 if boss else .14
         if section in [0,5,8]:lead_gain*=.64
         rhythm=[0,.5,1.25,2,2.5,3.25] if metre==4 else [0,.5,1,1.75,2,2.5]
-        if boss and section in [2,4,6,9]:rhythm=[0,.5,.75,1.5,2,2.5,3,3.5]
+        if (boss or race) and section in [2,4,6,9]:rhythm=[0,.5,.75,1.5,2,2.5,3,3.5]
         for tick,position in enumerate(rhythm):
             if position>=metre or (section==5 and tick%2):continue
             degree=motif[(bar%4*4+tick)%16]+melody_shift
@@ -99,13 +99,16 @@ def compose(spec):
         for d in [chord,chord+2,chord+4]:note(start,metre*beat*.94,pitch(d),.045,'pad',-.18)
         for tick in range(metre):
             note(start+tick*beat,beat*.73,pitch(chord,-1)+(12 if tick%2 else 0),.155,'tri')
-            if section not in [0,5,8] or tick%2==0:drum(start+tick*beat,'kick',.17 if boss else .125)
-            percussion='snare' if boss or scene in ['factory','volcano','citadel','candy','lobby'] else 'wood'
-            if tick%2:drum(start+tick*beat,percussion,.075 if boss else .035)
+            if section not in [0,5,8] or tick%2==0:drum(start+tick*beat,'kick',.17 if boss or race else .125)
+            percussion='snare' if boss or race or scene in ['factory','volcano','citadel','candy','lobby'] else 'wood'
+            if tick%2:drum(start+tick*beat,percussion,.075 if boss or race else .035)
             if section not in [0,5,8] and scene not in ['reef','cosmos','cave']:
                 drum(start+(tick+.5)*beat,'hat',.033)
             if section in [1,2,4,6,7,9]:
                 note(start+(tick+.25)*beat,beat*.28,pitch(chord+[0,2,4,2][tick%4],1),.06,'harp',-.55)
+        if race and section not in [0,5,8]:
+            for tick in range(metre):
+                for degree in [chord,chord+2,chord+4]:note(start+(tick+.5)*beat,beat*.18,pitch(degree),.028,'marimba',-.35)
         # Countermelody and sparse octave accents appear only in the later reprise.
         if section in [4,6,9] and bar%2==1:
             for tick in range(0,metre,2):note(start+(tick+.6)*beat,beat*.85,pitch(motif[(bar+tick+8)%16]),.072,'flute',-.42)
@@ -118,14 +121,14 @@ def compose(spec):
     mix=np.tanh(mix*1.35)
     rms=float(np.sqrt(np.mean(mix**2)))
     mix*=min(.145/max(rms,.001),.78/max(float(np.max(np.abs(mix))),.001))
-    if ident=='forest-alt':
+    if ident=='forest-alt' or race:
         # Native Vorbis pre-roll can expose this reed phrase's circular tail.
         # A 40 ms cadence at either edge keeps its decoded boundary quiet.
-        n=round(.04*SR);ramp=np.sin(np.linspace(0,math.pi/2,n))**2
+        n=round((.012 if race else .04)*SR);ramp=np.sin(np.linspace(0,math.pi/2,n))**2
         mix[:n]*=ramp[:,None];mix[-n:]*=ramp[::-1,None]
     peak=float(np.max(np.abs(mix)));rms=float(np.sqrt(np.mean(mix**2)))
     seam=float(np.max(np.abs(mix[0]-mix[-1])))
-    category='variations' if ident.endswith('-alt') else 'boss' if ident.startswith('boss-') else 'frontend'
+    category='racing' if ident.startswith('race-') else 'variations' if ident.endswith('-alt') else 'boss' if ident.startswith('boss-') else 'frontend'
     relative=category+'/'+ident+'.ogg'
     (OUT/category).mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='paopaotang-score-v476-') as tmp:
