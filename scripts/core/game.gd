@@ -1152,7 +1152,6 @@ func pickup(p,c,manual=false):
 	var kind=int(drops[c])
 	if kind==8:drops.erase(c);return
 	if kind==31 and (mode!=1 or p.get("car",false)):return
-	if growth_full(p,kind):return
 	var category=Catalog.ITEMS[kind].kind
 	if category=="active" and not manual and ((p.bot and p.pickup_lock==c) or (p.item!=0 and not p.bot)):return
 	if category=="active" and not manual and c!=p.cell and p.item!=0:return
@@ -1167,15 +1166,18 @@ func pickup(p,c,manual=false):
 	match kind:
 		31:p.car=true;p.mount=0;p.velocity=Vector2.ZERO;p.car_heading=Vector2(p.facing)
 		4:p.capacity=mini(6,p.capacity+1)
-		5:p.range=mini(8,p.range+1)
+		5:
+			# Rare upgrades can exceed the ordinary cap; collecting must not lower them.
+			if p.range<8:p.range+=1
 		7:p.speed=mini(5,p.speed+1)
 		29:p.range=maxi(W,H);announce("大力丸：水柱纵横拉满！")
 		30:
 			if rng.randf()<.5:p.reverse_time=20;announce("邪魔面具：中毒，操作反向二十秒！")
 			else:p.capacity=6;p.range=maxi(W,H);p.speed=5;announce("邪魔面具：三维全部拉满！")
 		28:
-			p.damage_level=mini(3,p.damage_level+1)
-			announce(loc("泡泡伤害提升至 %d！") % (1+p.damage_level))
+			if p.damage_level<3:
+				p.damage_level+=1
+				announce(loc("泡泡伤害提升至 %d！") % (1+p.damage_level))
 		15:
 			if p.mount==0 and not p.get("car",false):
 				p.mount=rng.randi_range(1,3)
