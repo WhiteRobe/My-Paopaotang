@@ -238,4 +238,8 @@ func draw_shelter(c):
 	g.canvas.draw_set_transform(pos+Vector2(0,6)+shake,0,Vector2(1,.28))
 	g.canvas.draw_circle(Vector2.ZERO,10,Color(.05,.09,.12,.24))
 	g.canvas.draw_set_transform(shake)
-	g.hd.sprite("maps/decorations/shelters-front-v497.png" if art>=5 else "maps/decorations/shelters-v480.png",art-5 if art>=5 else art,pos+Vector2(-size.x*.5,8-size.y),size,tint)
+	var atlas="maps/decorations/tunnels-v499.png" if art in [1,2,3,4] else "maps/decorations/shelters-front-v497.png" if art>=5 else "maps/decorations/shelters-v480.png"
+	var index=art-1 if art in [1,2,3,4] else art-5 if art>=5 else art
+	if art in [1,3]:size=Vector2(23,15)
+	elif art in [2,4]:size=Vector2(16,22)
+	g.hd.sprite(atlas,index,pos+Vector2(-size.x*.5,8-size.y),size,tint)

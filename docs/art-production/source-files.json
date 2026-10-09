@@ -465,5 +465,10 @@
     "name": "side-walk-v497",
     "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-3c1bf06e-cc1d-4c5f-8e98-3947b528faec.png",
     "resource": "assets/art/characters/walk/side-walk-v497.png"
+  },
+  {
+    "name": "tunnels-v499",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-8a1cb540-a149-40d7-ba03-61f9ca68cd35.png",
+    "resource": "assets/art/maps/decorations/tunnels-v499.png"
   }
 ]

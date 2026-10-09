@@ -1824,7 +1824,7 @@ func hero_sprite(pos,character,size,direction=0,pose=0,tint=Color.WHITE,seated=f
 	if side_walk:
 		# The head stays anchored; changing boot silhouettes cannot lift the body.
 		drawn=size;at=pos
-	var destination=Rect2(at+Vector2(drawn.x,0),Vector2(-drawn.x,drawn.y)) if side_walk and direction==3 else Rect2(at,drawn)
+	var destination=Rect2(at,drawn)
 	var hurt=pose in range(12,16)
 	var trapped=pose in range(16,20)
 	var placing=pose>=20
@@ -1837,14 +1837,21 @@ func hero_sprite(pos,character,size,direction=0,pose=0,tint=Color.WHITE,seated=f
 	if side_walk:
 		var entry=hd.regions[name][index]
 		if palette_id>=0:
+			if direction==3:
+				canvas.draw_set_transform(at+Vector2(drawn.x,0)+Vector2(sin(elapsed*83),cos(elapsed*71))*shake,0,Vector2(-1,1))
+				destination=Rect2(Vector2.ZERO,drawn)
 			canvas.draw_texture_rect(hero_palette.texture_for(palette_id,false,hd.textures[name],source,1.0,entry[4],false,[entry[5],entry[6]]),destination,false,tint)
 		else:
 			var factor=minf(size.x/float(entry[6][0]),size.y/float(entry[6][1]))
 			drawn=source.size*factor
 			at=pos+Vector2(size.x*.5-float(entry[5])*factor,0)
 			if direction==3:at.x=pos.x+size.x*.5-(drawn.x-float(entry[5])*factor)
-			destination=Rect2(at+Vector2(drawn.x,0),Vector2(-drawn.x,drawn.y)) if direction==3 else Rect2(at,drawn)
+			destination=Rect2(at,drawn)
+			if direction==3:
+				canvas.draw_set_transform(at+Vector2(drawn.x,0)+Vector2(sin(elapsed*83),cos(elapsed*71))*shake,0,Vector2(-1,1))
+				destination=Rect2(Vector2.ZERO,drawn)
 			hd.draw_region(name,index,destination,tint)
+		if direction==3:canvas.draw_set_transform(Vector2(sin(elapsed*83),cos(elapsed*71))*shake)
 	elif palette_id>=0:canvas.draw_texture_rect(hero_palette.texture_for(palette_id,false,hd.textures[name],source,.64 if seated else 1.0,hd.regions[name][index][4] if hd.regions[name][index].size()>4 else []),destination,false,tint)
 	else:hd.draw_region(name,index,destination,tint)
 	if angle!=0:canvas.draw_set_transform(Vector2(sin(elapsed*83),cos(elapsed*71))*shake)
@@ -2207,7 +2214,9 @@ func mini_board(pos,step=8):
 			else:hd.theme_sprite(theme,kind,pos+Vector2(x,y)*step,Vector2(step,step),Color.WHITE,false)
 	for c in terrain:
 		var type=terrain[c].type
-		if type=="shelter":hd.sprite("maps/decorations/shelters-v480.png",terrain[c].art,pos+Vector2(c)*step,Vector2.ONE*step)
+		if type=="shelter":
+			var art=terrain[c].art
+			hd.sprite("maps/decorations/tunnels-v499.png" if art in [1,2,3,4] else "maps/decorations/shelters-front-v497.png" if art>=5 else "maps/decorations/shelters-v480.png",art-1 if art in [1,2,3,4] else art-5 if art>=5 else art,pos+Vector2(c)*step,Vector2.ONE*step)
 		if type in ["portal","spring","lava","switch","ice"]:
 			canvas.draw_circle(pos+Vector2(c)*step+Vector2(step/2,step/2),step*.35,Color("d5aeff") if type=="portal" else Color("ffe1aa"))
 

@@ -96,7 +96,9 @@ func icon(entry,pos,side):
 		2:g.hd.mount_sprite(kind,0,pos,Vector2(side,side*.875),Color.WHITE,g.elapsed*5)
 		3:g.hd.enemy_frame(kind,0,int(g.elapsed*4)%6,pos,side)
 		4:
-			if kind>=6:g.hd.sprite("maps/decorations/shelters-v480.png",{6:0,7:1,8:3,9:5,10:6}[kind],pos,Vector2.ONE*side)
+			if kind>=6:
+				var atlas="maps/decorations/tunnels-v499.png" if kind in [7,8] else "maps/decorations/shelters-front-v497.png" if kind in [9,10] else "maps/decorations/shelters-v480.png"
+				g.hd.sprite(atlas,{6:0,7:0,8:2,9:0,10:1}[kind],pos,Vector2.ONE*side)
 			elif kind==5:g.hd.theme_sprite(g.Catalog.MAPS[g.arena].theme,6,pos,Vector2.ONE*side)
 			elif kind>=2:g.hd.theme_sprite(g.Catalog.MAPS[g.arena].theme,kind+1,pos,Vector2.ONE*side)
 			else:
@@ -183,7 +185,9 @@ func draw_preview(entry,frame):
 		if type in ["portal","switch","vortex","spring","lava","spike","clock","rail","flow"]:
 			var at=offset+(Vector2(c)+Vector2.ONE*.5)*step
 			g.canvas.draw_circle(at,step*.3,Color("96dcf0") if type in ["flow","vortex"] else Color("f5d692"))
-		elif type=="shelter":g.hd.sprite("maps/decorations/shelters-v480.png",data.terrain[c].art,offset+Vector2(c)*step,Vector2.ONE*step)
+		elif type=="shelter":
+			var art=data.terrain[c].art
+			g.hd.sprite("maps/decorations/tunnels-v499.png" if art in [1,2,3,4] else "maps/decorations/shelters-front-v497.png" if art>=5 else "maps/decorations/shelters-v480.png",art-1 if art in [1,2,3,4] else art-5 if art>=5 else art,offset+Vector2(c)*step,Vector2.ONE*step)
 
 	if data.race:
 		for i in range(data.checkpoints.size()):

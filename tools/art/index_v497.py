@@ -38,7 +38,7 @@ def index(regions):
   for v in entries:v.append(baseline)
   out+=entries
  regions[name]=out
- for filename,cols,rows in [('maps/decorations/shelters-front-v497.png',3,1),('maps/blocks/blocks-depth-v463.png',4,2)]:
+ for filename,cols,rows in [('maps/decorations/shelters-front-v497.png',3,1),('maps/blocks/blocks-depth-v463.png',4,2),('maps/decorations/tunnels-v499.png',2,2)]:
   image=Image.open(ROOT/filename);cells=[]
   for row in range(rows):
    for col in range(cols):
