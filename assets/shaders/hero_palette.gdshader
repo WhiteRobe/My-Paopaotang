@@ -7,6 +7,7 @@ uniform vec4 excluded_uv[8];
 uniform float body_fraction=1.0;
 uniform bool riding=false;
 uniform bool defeated=false;
+uniform int puppet_part=0;
 vec3 hsv(vec3 c) {
  vec4 K=vec4(0.,-1./3.,2./3.,-1.);
  vec4 p=mix(vec4(c.bg,K.wz),vec4(c.gb,K.xy),step(c.b,c.g));
@@ -25,6 +26,8 @@ void fragment() {
  vec3 original=hsv(pixel.rgb);vec3 theme=hsv(theme_color.rgb);
  float y=(UV.y-region_uv.y)/region_uv.w*body_fraction;
  float clothing=smoothstep(.40,.53,y)*(1.-smoothstep(.83,.98,y));
+ if (puppet_part==1) clothing=1.-smoothstep(.67,.86,y);
+ if (puppet_part==2) clothing=1.-smoothstep(.42,.60,y);
  if (riding) clothing=smoothstep(.22,.30,y)*(1.-smoothstep(.38,.45,y));
  // Warm skin, fur, pale fabric and metallic highlights keep their original colours.
  float warm=1.-smoothstep(.10,.16,original.x);

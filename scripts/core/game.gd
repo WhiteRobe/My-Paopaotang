@@ -1,6 +1,7 @@
 extends Node2D
 
 var hero_palette
+var side_anim
 const HDArt=preload("res://scripts/render/hd_art.gd")
 const MenuUI=preload("res://scripts/ui/menu_ui.gd")
 const Catalog = preload("res://scripts/data/catalog.gd")
@@ -156,6 +157,7 @@ func _ready():
 	rng.randomize()
 	hd=HDArt.new(self)
 	hero_palette=preload("res://scripts/render/hero_palette.gd").new(self)
+	side_anim=preload("res://scripts/render/side_walk.gd").new(self)
 	adventure=Adventure.new(self)
 	map_rules=MapMechanisms.new(self)
 	world_fx=WorldEffects.new(self)
@@ -1794,6 +1796,14 @@ func hero_piece(pos,size,source,part,offset=Vector2.ZERO,tint=Color.WHITE,direct
 func hero_sprite(pos,character,size,direction=0,pose=0,tint=Color.WHITE,seated=false,walk_phase=-1.0,palette_id=-1):
 	if character==8:
 		text_at("?",pos+Vector2(size.x*.25,size.y*.75),int(size.y*.7),Color("ffe08e"),size.x);return
+	if direction in [2,3] and not seated and pose<12:
+		var texture=side_anim.texture_for(palette_id,character,walk_phase if walk_phase>=0 else (pose-4)*1.5,pose in range(4,12))
+		if direction==3:
+			canvas.draw_set_transform(pos+Vector2(size.x,0)+Vector2(sin(elapsed*83),cos(elapsed*71))*shake,0,Vector2(-1,1))
+			canvas.draw_texture_rect(texture,Rect2(Vector2.ZERO,size),false,tint)
+			canvas.draw_set_transform(Vector2(sin(elapsed*83),cos(elapsed*71))*shake)
+		else:canvas.draw_texture_rect(texture,Rect2(pos,size),false,tint)
+		return
 	var name=HDArt.HERO_VIEWS[direction]
 	var source=premium_hero_region(character,direction)
 	var index=character
@@ -1804,11 +1814,6 @@ func hero_sprite(pos,character,size,direction=0,pose=0,tint=Color.WHITE,seated=f
 			var phase=(walk_phase if walk_phase>=0 else (pose-4)*1.5) if pose in range(4,12) else 0.0
 			var frames=int(hd.regions[name].size()/4)
 			index=direction*frames+posmod(int(phase*frames/12.0),frames);source=hd.region(name,index)
-	if direction in [2,3] and not seated and pose<12:
-		name="characters/walk/walk-"+HDArt.WALK_NAMES[character]+"-hd.png"
-		var frames=int(hd.regions[name].size()/4)
-		var phase=walk_phase if pose>=4 and walk_phase>=0 else 0.0
-		index=direction*frames+posmod(int(phase*frames/12.0),frames);source=hd.region(name,index)
 	if direction==0 and not seated and (pose in range(12,16) or pose in range(20,24)):
 		name="characters/actions/hero-actions-hd.png"
 		var action=mini(2,pose-12)+4 if pose<16 else pose-20
@@ -1820,12 +1825,8 @@ func hero_sprite(pos,character,size,direction=0,pose=0,tint=Color.WHITE,seated=f
 	var baseline=source.size
 	if name.begins_with("characters/walk/"):
 		baseline=hd.animation_baseline(name)
-	var side_walk=direction in [2,3] and name.begins_with("characters/walk/")
 	var drawn=source.size*minf(size.x/baseline.x,size.y/baseline.y)
 	var at=pos+Vector2((size.x-drawn.x)/2,size.y-drawn.y)
-	if side_walk:
-		# The head stays anchored; changing boot silhouettes cannot lift the body.
-		drawn=size;at=pos
 	var destination=Rect2(at,drawn)
 	var hurt=pose in range(12,16)
 	var trapped=pose in range(16,20)
@@ -1836,19 +1837,7 @@ func hero_sprite(pos,character,size,direction=0,pose=0,tint=Color.WHITE,seated=f
 		canvas.draw_set_transform(pivot+Vector2(sin(elapsed*83),cos(elapsed*71))*shake,angle)
 		at-=pivot
 		destination=Rect2(at,drawn)
-	if side_walk:
-		var entry=hd.regions[name][index]
-		if palette_id>=0:
-			canvas.draw_texture_rect(hero_palette.texture_for(palette_id,false,hd.textures[name],source,1.0,entry[4],false,[entry[5],entry[6]]),destination,false,tint)
-		else:
-			var factor=minf(size.x/float(entry[6][0]),size.y/float(entry[6][1]))
-			drawn=source.size*factor
-			at=pos+Vector2(size.x*.5-float(entry[5])*factor,0)
-
-			destination=Rect2(at,drawn)
-			hd.draw_region(name,index,destination,tint)
-
-	elif palette_id>=0:canvas.draw_texture_rect(hero_palette.texture_for(palette_id,false,hd.textures[name],source,.64 if seated else 1.0,hd.regions[name][index][4] if hd.regions[name][index].size()>4 else []),destination,false,tint)
+	if palette_id>=0:canvas.draw_texture_rect(hero_palette.texture_for(palette_id,false,hd.textures[name],source,.64 if seated else 1.0,hd.regions[name][index][4] if hd.regions[name][index].size()>4 else []),destination,false,tint)
 	else:hd.draw_region(name,index,destination,tint)
 	if angle!=0:canvas.draw_set_transform(Vector2(sin(elapsed*83),cos(elapsed*71))*shake)
 
@@ -2351,6 +2340,7 @@ func close_game():
 	get_tree().quit()
 func _exit_tree():
 	if hero_palette:hero_palette.renders.clear()
+	if side_anim:side_anim.renders.clear()
 	if music:music.stop();music.stream=null
 	if music_previous:music_previous.stop();music_previous.stream=null
 	for speaker in speakers:speaker.stop();speaker.stream=null

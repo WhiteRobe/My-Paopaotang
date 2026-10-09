@@ -112,5 +112,7 @@ from index_v497 import index as index_v497
 regions=index_v497(regions)
 from index_walk_anchors import index as index_walk_anchors
 regions=index_walk_anchors(regions)
+from index_side_rigs import index as index_side_rigs
+regions=index_side_rigs(regions)
 (R/'atlas-regions.json').write_text(json.dumps(regions,ensure_ascii=False,indent=2)+'\n')
 print(json.dumps(report,ensure_ascii=False,indent=2))

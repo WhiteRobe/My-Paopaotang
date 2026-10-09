@@ -470,5 +470,55 @@
     "name": "tunnels-v499",
     "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-8a1cb540-a149-40d7-ba03-61f9ca68cd35.png",
     "resource": "assets/art/maps/decorations/tunnels-v499.png"
+  },
+  {
+    "name": "sailor-side-rig-v501",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-cac97ea0-e4fd-4bb8-9b68-8c3a3bc2b654.png",
+    "resource": "assets/art/characters/rigs/sailor-v501.png"
+  },
+  {
+    "name": "bunny-side-rig-v501",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-2812af4f-0ed6-4aa5-9ddb-811c6554e151.png",
+    "resource": "assets/art/characters/rigs/bunny-v501.png"
+  },
+  {
+    "name": "frog-side-rig-v501",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-7b351884-10e2-45de-bb3e-8bb9ba09aeb6.png",
+    "resource": "assets/art/characters/rigs/frog-v501.png"
+  },
+  {
+    "name": "fox-side-rig-v501",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-27cf30e3-c614-4f3c-9d4f-02ddb6030386.png",
+    "resource": "assets/art/characters/rigs/fox-v501.png"
+  },
+  {
+    "name": "bear-side-rig-v501",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-cf1176b4-c43e-4f6c-95ee-22fbfeb9acb3.png",
+    "resource": "assets/art/characters/rigs/bear-v501.png"
+  },
+  {
+    "name": "witch-side-rig-v501",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-29718d21-2521-463d-91bb-a34e48c8569b.png",
+    "resource": "assets/art/characters/rigs/witch-v501.png"
+  },
+  {
+    "name": "robot-side-rig-v501",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-a6733ee5-b370-4f1c-a62e-73ea15bd7039.png",
+    "resource": "assets/art/characters/rigs/robot-v501.png"
+  },
+  {
+    "name": "flame-side-rig-v501",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-41e38f33-e1dd-47e3-98d2-00514c789e01.png",
+    "resource": "assets/art/characters/rigs/flame-v501.png"
+  },
+  {
+    "name": "torsos-0-side-rig-v501",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-8e806aee-09b9-4d17-bd13-0c8d10249b8a.png",
+    "resource": "assets/art/characters/rigs/torsos-0-v501.png"
+  },
+  {
+    "name": "torsos-1-side-rig-v501",
+    "path": "/Users/bytedance/.codex/generated_images/01a0ffb6-c8ef-78b0-8249-032112e9334c/exec-ab35b6eb-dbff-4c34-9a36-a7e0f7ad10ab.png",
+    "resource": "assets/art/characters/rigs/torsos-1-v501.png"
   }
 ]
