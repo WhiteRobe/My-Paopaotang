@@ -4,9 +4,10 @@ var timer=0.0
 var cells:Array=[]
 var bridge_open=true
 var echoes:Array=[]
+var drop_transit={}
 func _init(game):g=game
 func setup():
-	cells.clear();echoes.clear();timer=6 if g.rule()=="whirlpool" else 5;bridge_open=true
+	cells.clear();echoes.clear();drop_transit.clear();timer=6 if g.rule()=="whirlpool" else 5;bridge_open=true
 	var points=[Vector2i(4,4),Vector2i(g.W-5,g.H-5),Vector2i(4,g.H-5),Vector2i(g.W-5,4),Vector2i(g.W/2,g.H/2-3),Vector2i(g.W/2,g.H/2+3)]
 	match g.rule():
 		"mud","poison","spikes","gustpads","whirlpool","mirror","geyser","chronofield":
@@ -25,6 +26,7 @@ func setup():
 		"blackout":
 			for c in points:g.clear_patch(c);g.terrain[c]={"type":"lamp"};cells.append(c)
 func update(dt):
+	update_transport(dt)
 	if g.arena<20:return
 	timer-=dt
 	for echo in echoes.duplicate():
@@ -117,3 +119,53 @@ func pull_vortex():
 		if not g.bubble_can_move(b.cell+d) or not g.can_cross(b.cell,b.cell+d):continue
 		g.burst(g.center(b.cell),Color("a7e7f4"),4)
 		b.cell+=d;b.slide=Vector2i.ZERO;b.step=0
+
+# Keep grid occupancy authoritative, interpolating only the artwork between cells.
+func transport_free(c,from,for_drop=false):
+	if not g.inside(c) or g.grid[c.y][c.x]!=0 or not g.can_cross(from,c):return false
+	if g.bomb_at(c)!=null:return false
+	if not for_drop and g.occupied(c)!=null:return false
+	if for_drop and g.drops.has(c):return false
+	for b in g.bombs:
+		if b.get("belt_to",b.cell)==c:return false
+	for move in drop_transit.values():
+		if move.to==c:return false
+	return true
+
+func update_transport(dt):
+	for c in drop_transit.keys():
+		var move=drop_transit[c]
+		if not g.drops.has(c) or g.drops[c]!=move.kind or g.grid[c.y][c.x]!=0:
+			drop_transit.erase(c);continue
+		move.progress=minf(1,move.progress+dt/.48)
+		if move.progress>=1:
+			var target=move.to
+			# Its own reservation must not prevent arrival.
+			drop_transit.erase(c)
+			if transport_free(target,c,true):g.drops.erase(c);g.drops[target]=move.kind
+	for c in g.drops.keys():
+		if drop_transit.has(c) or not g.terrain.has(c) or g.terrain[c].type!="flow":continue
+		var target=c+g.terrain[c].dir
+		if transport_free(target,c,true):drop_transit[c]={"to":target,"kind":g.drops[c],"progress":0.0}
+	for b in g.bombs:
+		if b.slide!=Vector2i.ZERO or (b.has("belt_from") and b.belt_from!=b.cell):
+			b.erase("belt_to");b.erase("belt_progress");b.erase("belt_from");continue
+		if b.has("belt_to"):
+			b.belt_progress=minf(1,b.belt_progress+dt/.48)
+			if b.belt_progress>=1:
+				var previous=b.cell;var target=b.belt_to
+				b.erase("belt_to");b.erase("belt_progress");b.erase("belt_from")
+				if transport_free(target,previous):
+					b.cell=target
+					# Everyone touching the moving bubble can step clear of it.
+					for p in g.players:
+						if absf(p.visual.x-target.x)<.76 and absf(p.visual.y-target.y)<.76 and not p.bubble_pass_cells.has(target):p.bubble_pass_cells.append(target)
+		if not b.has("belt_to") and g.terrain.has(b.cell) and g.terrain[b.cell].type=="flow":
+			var target=b.cell+g.terrain[b.cell].dir
+			if transport_free(target,b.cell):b.belt_from=b.cell;b.belt_to=target;b.belt_progress=0.0
+
+func bubble_position(b):
+	return g.center(b.cell).lerp(g.center(b.belt_to),b.belt_progress) if b.has("belt_to") else g.center(b.cell)
+
+func drop_position(c):
+	return g.center(c).lerp(g.center(drop_transit[c].to),drop_transit[c].progress) if drop_transit.has(c) else g.center(c)

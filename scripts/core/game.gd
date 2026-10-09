@@ -17,9 +17,9 @@ const MAP_COUNT=47
 const Racing=preload("res://scripts/gameplay/racing.gd")
 var racing
 var team_count=2
-var W = 27
+var W = 31
 var H = 19
-const VIEW_SIZE=Vector2(27,19)
+const VIEW_SIZE=Vector2(31,19)
 var camera=Vector2.ZERO
 var map_void={}
 var canvas:CanvasItem
@@ -489,9 +489,9 @@ func bubble_can_move(c): return passable(c) and occupied(c)==null
 func build_board(index,playing=false):
 	if index>=44:racing.build(index);return
 	map_void.clear();camera=Vector2.ZERO
-	W=27;H=19
+	W=31;H=19
 	if playing and mode==3:
-		var dimensions=[Vector2i(51,19),Vector2i(27,37),Vector2i(43,31),Vector2i(47,29)][(adventure_stage-1)%4]
+		var dimensions=[Vector2i(51,19),Vector2i(31,37),Vector2i(43,31),Vector2i(47,29)][(adventure_stage-1)%4]
 		W=dimensions.x;H=dimensions.y
 	SPAWNS=[Vector2i(1,1),Vector2i(1,H-2),Vector2i(1,H/2),Vector2i(W/2,1),Vector2i(W-2,H-2),Vector2i(W-2,1),Vector2i(W-2,H/2),Vector2i(W/2,H-2)]
 	if playing and mode==3:SPAWNS=[Vector2i(2,3),Vector2i(4,3),Vector2i(2,5),Vector2i(4,5)]
@@ -758,8 +758,10 @@ func refresh_preview():
 	update_music(0)
 func pause_action(choice):
 	if choice==0: state=pause_return;paused=false
-	elif choice==1: return_to_menu()
-	else: close_game()
+	elif choice==1:
+		if not round_recorded:stat("abandoned");save_profile()
+		start_match()
+	else: return_to_menu()
 func return_to_menu():
 	if not round_recorded:
 		stat("abandoned")
@@ -1803,10 +1805,10 @@ func hero_sprite(pos,character,size,direction=0,pose=0,tint=Color.WHITE,seated=f
 			var frames=int(hd.regions[name].size()/4)
 			index=direction*frames+posmod(int(phase*frames/12.0),frames);source=hd.region(name,index)
 	if direction in [2,3] and not seated and pose<12:
-		name="characters/walk/side-walk-v497.png"
-		var frames=int(hd.regions[name].size()/8)
+		name="characters/walk/walk-"+HDArt.WALK_NAMES[character]+"-hd.png"
+		var frames=int(hd.regions[name].size()/4)
 		var phase=walk_phase if pose>=4 and walk_phase>=0 else 0.0
-		index=character*frames+posmod(int(phase*frames/12.0),frames);source=hd.region(name,index)
+		index=direction*frames+posmod(int(phase*frames/12.0),frames);source=hd.region(name,index)
 	if direction==0 and not seated and (pose in range(12,16) or pose in range(20,24)):
 		name="characters/actions/hero-actions-hd.png"
 		var action=mini(2,pose-12)+4 if pose<16 else pose-20
@@ -1818,7 +1820,7 @@ func hero_sprite(pos,character,size,direction=0,pose=0,tint=Color.WHITE,seated=f
 	var baseline=source.size
 	if name.begins_with("characters/walk/"):
 		baseline=hd.animation_baseline(name)
-	var side_walk=name=="characters/walk/side-walk-v497.png"
+	var side_walk=direction in [2,3] and name.begins_with("characters/walk/")
 	var drawn=source.size*minf(size.x/baseline.x,size.y/baseline.y)
 	var at=pos+Vector2((size.x-drawn.x)/2,size.y-drawn.y)
 	if side_walk:
@@ -1837,21 +1839,15 @@ func hero_sprite(pos,character,size,direction=0,pose=0,tint=Color.WHITE,seated=f
 	if side_walk:
 		var entry=hd.regions[name][index]
 		if palette_id>=0:
-			if direction==3:
-				canvas.draw_set_transform(at+Vector2(drawn.x,0)+Vector2(sin(elapsed*83),cos(elapsed*71))*shake,0,Vector2(-1,1))
-				destination=Rect2(Vector2.ZERO,drawn)
 			canvas.draw_texture_rect(hero_palette.texture_for(palette_id,false,hd.textures[name],source,1.0,entry[4],false,[entry[5],entry[6]]),destination,false,tint)
 		else:
 			var factor=minf(size.x/float(entry[6][0]),size.y/float(entry[6][1]))
 			drawn=source.size*factor
 			at=pos+Vector2(size.x*.5-float(entry[5])*factor,0)
-			if direction==3:at.x=pos.x+size.x*.5-(drawn.x-float(entry[5])*factor)
+
 			destination=Rect2(at,drawn)
-			if direction==3:
-				canvas.draw_set_transform(at+Vector2(drawn.x,0)+Vector2(sin(elapsed*83),cos(elapsed*71))*shake,0,Vector2(-1,1))
-				destination=Rect2(Vector2.ZERO,drawn)
 			hd.draw_region(name,index,destination,tint)
-		if direction==3:canvas.draw_set_transform(Vector2(sin(elapsed*83),cos(elapsed*71))*shake)
+
 	elif palette_id>=0:canvas.draw_texture_rect(hero_palette.texture_for(palette_id,false,hd.textures[name],source,.64 if seated else 1.0,hd.regions[name][index][4] if hd.regions[name][index].size()>4 else []),destination,false,tint)
 	else:hd.draw_region(name,index,destination,tint)
 	if angle!=0:canvas.draw_set_transform(Vector2(sin(elapsed*83),cos(elapsed*71))*shake)
@@ -1895,9 +1891,9 @@ func _draw():
 	if mode==1:racing.draw_hud();return
 	draw_hud()
 	draw_sidebar()
-	var board_scale=312.0/(VIEW_SIZE.y*TILE)
+	var board_scale=326.0/(VIEW_SIZE.y*TILE)
 	world_clip.scale=Vector2.ONE*board_scale
-	world_clip.position=Vector2((640-VIEW_SIZE.x*TILE*board_scale)/2,25)
+	world_clip.position=Vector2(4,28)
 	world_canvas.queue_redraw()
 
 func draw_tile(c):
@@ -2007,7 +2003,7 @@ func draw_laser_emitters():
 			canvas.draw_circle(pos+Vector2(-3 if x==W-1 else 3,0),1.2,Color(1,.8,.4,.3+intensity*.7))
 
 func draw_bomb(b):
-	var pos=center(b.cell)
+	var pos=map_rules.bubble_position(b)
 	var p=players[b.owner]
 	var element=b.get("element",0)
 	var color=color_for(p) if element==0 else Color(BubbleEffects.STYLES[element].color)
@@ -2161,44 +2157,66 @@ func draw_round_timer():
 			var x=320+side*(74+pulse*2)
 			canvas.draw_polyline(PackedVector2Array([Vector2(x+side*2,8),Vector2(x,12),Vector2(x+side*2,16)]),Color(color,.4+pulse*.6),1)
 
+func draw_daylight_gauge():
+	var at=Vector2(422,3)
+	panel(at,Vector2(108,20),Color("668b9b"))
+	var sun=at+Vector2(10,10)
+	canvas.draw_circle(sun,3,Color("ffe08e"))
+	for i in range(8):
+		var ray=Vector2.from_angle(i*TAU/8)
+		canvas.draw_line(sun+ray*4,sun+ray*5.5,Color("ffe08e"),.6)
+	var moon=at+Vector2(70,10)
+	canvas.draw_circle(moon,4,Color("c0d6ff"))
+	canvas.draw_circle(moon+Vector2(2,-1),3.5,INK)
+	canvas.draw_line(at+Vector2(20,10),at+Vector2(61,10),Color("587c91"),2)
+	canvas.draw_circle(at+Vector2(20+41*weather.nightness,10),2.5,Color("e5ffff"))
+	text_at(weather.label(),at+Vector2(79,13),7,CREAM,26)
+
 func draw_hud():
-	text_at(Catalog.MAPS[arena].name,Vector2(8,15),10,CREAM,180)
+	text_at(Catalog.MAPS[arena].name,Vector2(8,16),10,CREAM,220)
 	draw_round_timer()
+	draw_daylight_gauge()
 	button(Vector2(552,3),Vector2(80,20),"暂停 / 退出")
-	for i in range(players.size()):
-		var p=players[i];var pos=Vector2(5+i*79,341);var color=color_for(p)
-		panel(pos,Vector2(76,15),color)
-		text_at(("B" if p.bot else "P")+str(i+1),pos+Vector2(3,10),8,color,14)
-		text_at("出局" if p.dead else "被困" if p.trap>0 else loc("泡%d 水%d 速%d") % [p.capacity,p.range,p.speed],pos+Vector2(18,10),7,Color("8796a6") if p.dead else CREAM,43)
-		if p.item>0:item_icon(pos+Vector2(63,1),p.item,12)
 
 func draw_sidebar():
-	var p=primary_player()
-	text_at(weather.label(),Vector2(405,15),8,Color("ead0a1"),134)
-	# Short readouts use the natural aspect-ratio margins, without tall panels.
-	if p.item>0:
-		item_icon(Vector2(8,32),p.item,17)
-		text_at(Catalog.ITEMS[p.item].name,Vector2(8,61),9,CREAM,77)
+	var at=Vector2(540,28)
+	panel(at,Vector2(94,326),Color("527a8c"))
+	var list=racing.ordered() if mode==1 else players
+	for i in range(list.size()):
+		var p=list[i];var pos=at+Vector2(4,4+i*30);var color=color_for(p)
+		canvas.draw_texture_rect(hero_palette.texture_for(p.id,true,hd.textures[HDArt.HERO_VIEWS[0]],Rect2(premium_hero_region(p.character).position, premium_hero_region(p.character).size*Vector2(1,.62)),.62),Rect2(pos,Vector2(20,21)),false,Color(.48,.48,.48,.65) if p.dead else Color.WHITE)
+		text_at((str(i+1)+". " if mode==1 else "")+("B" if p.bot else "P")+str(p.id+1),pos+Vector2(23,8),7,Color("8796a6") if p.dead else color,28)
+		text_at(team_name(p.team),pos+Vector2(51,8),7,Color("8796a6") if p.dead else color,34)
+		var detail=loc("泡%d 水%d 速%d") % [p.capacity,p.range,p.speed]
+		text_at(detail,pos+Vector2(23,18),7,Color("8796a6") if p.dead else CREAM,61)
+		if mode==1:detail=(loc("%d 分") % p.race_points) if p.race_finished else (loc("复活 %d 秒") % ceili(p.respawn)) if p.dead else (loc("%d/%d 圈 · CP%d") % [p.race_lap,racing.laps,p.race_next])
+		elif p.dead or p.trap>0:detail=loc("出局" if p.dead else "被困")
+		if mode==1 or p.dead or p.trap>0:text_at(detail,pos+Vector2(1,27),7,Color("8796a6") if p.dead else CREAM,83)
+	var humans_list=players.filter(func(p):return not p.bot)
+	var base=at+Vector2(4,247)
+	for i in range(humans_list.size()):
+		var p=humans_list[i];var pos=base+Vector2((i%2)*43,int(i/2)*30)
+		text_at("P"+str(p.id+1),pos+Vector2(1,9),7,color_for(p),19)
+		if p.item>0:item_icon(pos+Vector2(20,0),p.item,17)
+		text_at(["Q","/","O","Y"][p.control],pos+Vector2(21,25),7,CREAM,18)
 	if mode==3:
-		wrapped(adventure.stage.objective,Vector2(550,42),6,CREAM,4)
-		wrapped(adventure.objective_label(),Vector2(550,105),6,Color("9ce3c4"),3)
-		text_at(loc("支线 %d/2") % adventure.bonus_progress,Vector2(550,155),8,Color("cbb2e8"),77)
-		text_at("复苏",Vector2(550,171),8,Color("ffe08e"),42)
-		text_at(str(adventure.revives),Vector2(605,171),8,CREAM,20)
+		var task_at=at+Vector2(4,8+players.size()*30)
+		var lines=wrap_lines(loc(adventure.stage.objective),85,7)
+		for i in range(mini(3,lines.size())):text_at(lines[i],task_at+Vector2(0,i*9),7,CREAM,85)
+		text_at(adventure.objective_label(),task_at+Vector2(0,32),7,Color("9ce3c4"),85)
+		text_at((loc("支线 %d/2") % adventure.bonus_progress)+" · "+loc("复苏")+str(adventure.revives),task_at+Vector2(0,43),7,Color("ffe08e"),85)
 		var bosses=adventure.enemies.filter(func(e):return e.boss and not e.dead)
-		if not bosses.is_empty():health_bar(Vector2(550,184),bosses[0].hp,bosses[0].max_hp,77,3)
-		var map_at=Vector2(8,195);var step=minf(76.0/W,55.0/H)
+		if not bosses.is_empty():health_bar(task_at+Vector2(0,48),bosses[0].hp,bosses[0].max_hp,85,3)
+		var map_at=task_at+Vector2(0,57);var step=minf(84.0/W,54.0/H)
 		for y in range(H):
 			for x in range(W):
 				if not map_void.has(Vector2i(x,y)):rect(map_at+Vector2(x,y)*step,Vector2.ONE*step,Color("718094") if grid[y][x]==1 else Color("293e4b"))
-		for o in adventure.objects:
-			if not o.active:rect(map_at+Vector2(o.cell)*step-Vector2.ONE,Vector2(2,2),Color("ffda70"))
+		for object in adventure.objects:
+			if not object.active:rect(map_at+Vector2(object.cell)*step-Vector2.ONE,Vector2(2,2),Color("ffda70"))
 		for actor in players:
 			if not actor.dead:rect(map_at+actor.visual*step-Vector2.ONE,Vector2(2,2),color_for(actor))
 		canvas.draw_rect(Rect2(map_at+camera*step,VIEW_SIZE*step),Color("d4eff2"),false,.5)
-	if notice_time>0:
-		var lines=wrap_lines(loc(notice),76,8)
-		for i in range(mini(lines.size(),5)):text_at(lines[i],Vector2(8,83+i*11),8,Color("ffe3a8"),76)
+	elif notice_time>0:text_at(notice,at+Vector2(4,320),7,Color("ffe3a8"),85)
 
 func mini_board(pos,step=8):
 	var theme=Catalog.MAPS[arena].theme
@@ -2290,13 +2308,13 @@ func draw_help():
 		item_icon(pos,i,24)
 		text_at(Catalog.ITEMS[i].name,pos+Vector2(0,36),12,Color(Catalog.ITEMS[i].color),82)
 	wrapped("轮箱可以推动；加固箱两点耐久，宝库箱八点耐久。空手自动拾取；手持主动道具时按 E / . / ; / V 更换。蓝色加号代表成长，成长每局重置。",Vector2(20,280),48,CREAM)
-	text_at("ESC / P 暂停，可返回大厅或保存并退出；M 声音。",Vector2(20,346),12,Color("ffe08e"))
+	text_at("ESC / P 暂停，可重新开始或返回大厅；M 声音。",Vector2(20,346),12,Color("ffe08e"))
 
 func draw_pause():
 	rect(Vector2.ZERO,Vector2(640,360),Color(.03,.06,.12,.85))
 	panel(Vector2(160,103),Vector2(320,172),Color("8bd5d1"))
 	centered("歇一会儿",136,24,CREAM)
-	for i in range(3):button(Vector2(195,153+i*32),Vector2(250,28),["继续对战","返回大厅（记录退出）","保存并退出游戏"][i],i==quit_selection)
+	for i in range(3):button(Vector2(195,153+i*32),Vector2(250,28),["继续对战","重新开始","返回大厅（记录退出）"][i],i==quit_selection)
 	centered("上下选择 / 回车确认 / ESC 继续",294,12)
 	wrapped(Catalog.MAPS[arena].tip,Vector2(80,318),40,Color("b7d2ce"),2)
 func draw_result():
@@ -2395,7 +2413,7 @@ func draw_world():
 		if not box.dead:depth.append({"y":(box.visual.y+box.size.y)*TILE,"kind":"box","data":box})
 	for c in weather.torches:depth.append({"y":c.y*TILE+14.0,"kind":"torch","data":c})
 	for c in drops:depth.append({"y":c.y*TILE+13.0,"kind":"drop","data":c})
-	for bomb in bombs:depth.append({"y":bomb.cell.y*TILE+13.0,"kind":"bomb","data":bomb})
+	for bomb in bombs:depth.append({"y":map_rules.bubble_position(bomb).y-ORIGIN.y+5.0,"kind":"bomb","data":bomb})
 	for d in decoys:depth.append({"y":d.cell.y*TILE+13.0,"kind":"decoy","data":d})
 	if mode==3:
 		depth.append({"y":adventure.checkpoint.y*TILE+23.0,"kind":"gate","data":null})
@@ -2455,12 +2473,12 @@ func draw_drop(c):
 	var kind=int(drops[c])
 	var bob=sin(elapsed*4+c.x)*1.25
 	var drop_color=Color(Catalog.ITEMS[kind].color)
-	canvas.draw_circle(center(c)+Vector2(0,5),6,Color(.06,.12,.18,.18))
-	canvas.draw_arc(center(c)+Vector2(0,4),6+sin(elapsed*3+c.y)*.5,0,TAU,24,Color(drop_color,.35),1)
-	item_icon(center(c)+Vector2(-6,-7+bob),kind,12)
+	canvas.draw_circle(map_rules.drop_position(c)+Vector2(0,5),6,Color(.06,.12,.18,.18))
+	canvas.draw_arc(map_rules.drop_position(c)+Vector2(0,4),6+sin(elapsed*3+c.y)*.5,0,TAU,24,Color(drop_color,.35),1)
+	item_icon(map_rules.drop_position(c)+Vector2(-6,-7+bob),kind,12)
 	var sparkle=fmod(elapsed+c.x*.3+c.y*.2,2)
 	if sparkle<.45:
-		var at=center(c)+Vector2(7,-9+bob)
+		var at=map_rules.drop_position(c)+Vector2(7,-9+bob)
 		canvas.draw_line(at-Vector2(2,0),at+Vector2(2,0),Color(1,.98,.8,1-sparkle/.45),1)
 		canvas.draw_line(at-Vector2(0,2),at+Vector2(0,2),Color(1,.98,.8,1-sparkle/.45),1)
 
@@ -2485,6 +2503,12 @@ func nearest_playable(c):
 	return Vector2i(W/2,H/2)
 
 func draw_game_overlay():
+	if state=="play" and countdown<=0 and round_time<5:
+		var alpha=clampf(round_time/.3,0,1)*clampf((5-round_time)/.7,0,1)
+		canvas.draw_rect(Rect2(116,34,408,47),Color(.035,.09,.15,.9*alpha))
+		text_at(Catalog.MAPS[arena].name,Vector2(128,48),10,Color(1,.88,.55,alpha),382)
+		var lines=wrap_lines(loc(Catalog.MAPS[arena].tip),382,8)
+		for i in range(mini(2,lines.size())):text_at(lines[i],Vector2(128,61+i*11),8,Color(.9,.97,1,alpha),382)
 	if countdown>0:
 		panel(Vector2(238,165),Vector2(164,44),Color("62ceff"))
 		centered(str(int(ceil(countdown))) if countdown>.7 else "开战！",197,24)

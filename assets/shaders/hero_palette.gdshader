@@ -6,6 +6,7 @@ uniform int excluded_count=0;
 uniform vec4 excluded_uv[8];
 uniform float body_fraction=1.0;
 uniform bool riding=false;
+uniform bool defeated=false;
 vec3 hsv(vec3 c) {
  vec4 K=vec4(0.,-1./3.,2./3.,-1.);
  vec4 p=mix(vec4(c.bg,K.wz),vec4(c.gb,K.xy),step(c.b,c.g));
@@ -30,5 +31,7 @@ void fragment() {
  float skin=warm*smoothstep(.38,.58,original.z);
  float mask=clothing*smoothstep(.12,.30,original.y)*(1.-skin);
  vec3 replacement=rgb(vec3(theme.x,mix(original.y,max(original.y,.55),.55),original.z));
- COLOR=vec4(mix(pixel.rgb,replacement,mask*.88),pixel.a);
+ vec3 painted=mix(pixel.rgb,replacement,mask*.88);
+ if (defeated) painted=vec3(dot(painted,vec3(.299,.587,.114)));
+ COLOR=vec4(painted,pixel.a);
 }

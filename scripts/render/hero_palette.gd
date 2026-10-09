@@ -33,4 +33,5 @@ func texture_for(id,portrait,texture,region,body_fraction=1.0,omissions=[],ridin
 	render.material.set_shader_parameter("excluded_uv",excluded)
 	render.material.set_shader_parameter("body_fraction",body_fraction)
 	render.material.set_shader_parameter("riding",riding)
+	render.material.set_shader_parameter("defeated",portrait and id<g.players.size() and g.state in ["play","pause","finale","result"] and g.players[id].dead)
 	return render.viewport.get_texture()

@@ -350,20 +350,10 @@ func sync_views():
 		views[i].clip.visible=visible and i<humans.size()
 		if not views[i].clip.visible:continue
 		var columns=1 if humans.size()==1 else 2;var rows=2 if humans.size()>2 else 1
-		views[i].clip.position=Vector2(5+(i%columns)*254,26+int(i/columns)*160)
-		views[i].clip.size=Vector2(506 if columns==1 else 249,312 if rows==1 else 152)
+		views[i].clip.position=Vector2(5+(i%columns)*266,28+int(i/columns)*166)
+		views[i].clip.size=Vector2(530 if columns==1 else 261,326 if rows==1 else 160)
 		views[i].canvas.queue_redraw()
 func draw_hud():
-	g.text_at(g.Catalog.MAPS[g.arena].name,Vector2(8,15),10,g.CREAM,200)
-	g.draw_round_timer()
-	g.button(Vector2(552,3),Vector2(80,20),"暂停 / 退出")
-	g.panel(Vector2(518,27),Vector2(115,311),Color("62ceff"))
-	g.text_at("当前名次",Vector2(525,43),11,Color("ffe3a8"),100)
-	var list=ordered()
-	for i in range(list.size()):
-		var p=list[i];var at=Vector2(525,61+i*31)
-		g.text_at(str(i+1)+". "+("B" if p.bot else "P")+str(p.id+1)+" · "+g.team_name(p.team),at,8,g.color_for(p),100)
-		var label=(g.loc("%d 分") % p.race_points) if p.race_finished else (g.loc("复活 %d 秒") % ceili(p.respawn)) if p.dead else (g.loc("%d/%d 圈 · CP%d") % [p.race_lap,laps,p.race_next])
-		g.text_at(label,at+Vector2(0,10),7,g.CREAM,100)
-		g.text_at(g.loc("泡泡%d · 水柱%d · 速度%d") % [p.capacity,p.range,p.speed],at+Vector2(0,20),7,Color("acd5df"),100)
-	g.text_at("仅驾驶赛车通过检查点有效",Vector2(8,353),8,g.CREAM,300)
+	g.draw_hud()
+	g.draw_sidebar()
+	g.text_at("仅驾驶赛车通过检查点有效",Vector2(8,353),8,g.CREAM,500)

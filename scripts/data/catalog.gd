@@ -4,7 +4,7 @@ const THEMES = ["harbor", "forest", "frost", "desert", "volcano", "factory", "ca
 const MAPS = [
 	{"name":"晴日潮汐港", "theme":0, "rule":"tide", "seconds":150, "layout":0, "tip":"倒计时结束后，码头逐圈坍塌入海。"},
 	{"name":"双环航运站", "theme":0, "rule":"portal", "seconds":170, "layout":1, "tip":"两组传送环相连，出口被占用时无法通行。"},
-	{"name":"漩涡水道", "theme":0, "rule":"flow", "seconds":160, "layout":2, "tip":"中央水流推动角色，转向可以离开水道。"},
+	{"name":"漩涡水道", "theme":0, "rule":"flow", "seconds":160, "layout":2, "tip":"传送带顺向加速、逆向减速，也会运送泡泡和地上的道具。"},
 	{"name":"蘑菇跳跳林", "theme":1, "rule":"mushroom", "seconds":160, "layout":3, "tip":"踩到蘑菇向前弹两格，可越过一格木箱。"},
 	{"name":"蔓藤迷径", "theme":1, "rule":"vine", "seconds":180, "layout":4, "tip":"藤蔓每十八秒长回，留心通道变化。"},
 	{"name":"风车花丘", "theme":1, "rule":"wind", "seconds":150, "layout":5, "tip":"周期阵风推人，风向会不断变化。"},
@@ -44,7 +44,7 @@ const MAPS = [
 	{"name":"核心王座","theme":12,"rule":"echo","seconds":210,"layout":39,"tip":"王座反射爆炸回声，离开原水柱后仍要留心二次冲击。"},
 	{"name":"火炬岩窟","theme":13,"rule":"cave","seconds":190,"layout":40,"night":true,"tip":"洞窟常年黑夜，随机火把提供稳定视野。照明弹可照亮全图。"},
 	{"name":"迷雾矿道","theme":13,"rule":"cavefog","seconds":200,"layout":41,"night":true,"fog":true,"tip":"浓雾周期覆盖矿道，风会暂时吹散雾气。手持火把能扩大视野。"},
-	{"name":"地下暗河","theme":13,"rule":"flow","seconds":195,"layout":42,"night":true,"tip":"暗河水流推动角色，沿火把探索通道。泡泡爆炸前逐渐发亮。"},
+	{"name":"地下暗河","theme":13,"rule":"flow","seconds":195,"layout":42,"night":true,"tip":"暗河水流运送人物、泡泡和道具；沿火把探索，留意泡泡预警。"},
 	{"name":"蝠影回音厅","theme":13,"rule":"echo","seconds":210,"layout":43,"night":true,"tip":"蝙蝠飞过钟乳石洞厅。爆炸留下回声，火把和照明弹帮助观察退路。"},
 	{"name":"海港内湾赛道","theme":0,"rule":"race","seconds":180,"layout":44,"tip":"驾驶赛车依次通过检查点，完成三圈。"},
 	{"name":"森林折返赛道","theme":1,"rule":"race","seconds":180,"layout":45,"tip":"弯道提前减速，避免冲出赛车路线。"},
