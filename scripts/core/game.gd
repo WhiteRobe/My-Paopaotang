@@ -721,7 +721,7 @@ func _unhandled_input(event):
 	if state=="codex":encyclopedia.input_mouse(pos);return
 	if frontend.active():frontend.input_mouse(pos);return
 	if state=="story":adventure.advance_dialogue()
-	elif state=="play" and Rect2(549,315,78,25).has_point(pos):
+	elif state=="play" and Rect2(552,3,80,20).has_point(pos):
 		pause_return="play";state="pause"; paused=true; quit_selection=0
 	elif state=="pause":
 		for i in range(3):
@@ -1802,9 +1802,11 @@ func hero_sprite(pos,character,size,direction=0,pose=0,tint=Color.WHITE,seated=f
 			var phase=(walk_phase if walk_phase>=0 else (pose-4)*1.5) if pose in range(4,12) else 0.0
 			var frames=int(hd.regions[name].size()/4)
 			index=direction*frames+posmod(int(phase*frames/12.0),frames);source=hd.region(name,index)
-			if direction in [2,3]:
-				name="characters/walk/side-walk-v497.png";frames=int(hd.regions[name].size()/8)
-				index=character*frames+posmod(int(phase*frames/12.0),frames);source=hd.region(name,index)
+	if direction in [2,3] and not seated and pose<12:
+		name="characters/walk/side-walk-v497.png"
+		var frames=int(hd.regions[name].size()/8)
+		var phase=walk_phase if pose>=4 and walk_phase>=0 else 0.0
+		index=character*frames+posmod(int(phase*frames/12.0),frames);source=hd.region(name,index)
 	if direction==0 and not seated and (pose in range(12,16) or pose in range(20,24)):
 		name="characters/actions/hero-actions-hd.png"
 		var action=mini(2,pose-12)+4 if pose<16 else pose-20
@@ -1816,13 +1818,13 @@ func hero_sprite(pos,character,size,direction=0,pose=0,tint=Color.WHITE,seated=f
 	var baseline=source.size
 	if name.begins_with("characters/walk/"):
 		baseline=hd.animation_baseline(name)
-	if name=="characters/walk/side-walk-v497.png":baseline=Vector2(hd.regions[name][index][6][0],hd.regions[name][index][6][1])
+	var side_walk=name=="characters/walk/side-walk-v497.png"
 	var drawn=source.size*minf(size.x/baseline.x,size.y/baseline.y)
 	var at=pos+Vector2((size.x-drawn.x)/2,size.y-drawn.y)
-	if name=="characters/walk/side-walk-v497.png":
-		var pivot_x=float(hd.regions[name][index][5])*drawn.x/source.size.x
-		at.x=pos.x+size.x*.5-(drawn.x-pivot_x if direction==3 else pivot_x)
-	var destination=Rect2(at+Vector2(drawn.x,0),Vector2(-drawn.x,drawn.y)) if name=="characters/walk/side-walk-v497.png" and direction==3 else Rect2(at,drawn)
+	if side_walk:
+		# The head stays anchored; changing boot silhouettes cannot lift the body.
+		drawn=size;at=pos
+	var destination=Rect2(at+Vector2(drawn.x,0),Vector2(-drawn.x,drawn.y)) if side_walk and direction==3 else Rect2(at,drawn)
 	var hurt=pose in range(12,16)
 	var trapped=pose in range(16,20)
 	var placing=pose>=20
@@ -1832,7 +1834,18 @@ func hero_sprite(pos,character,size,direction=0,pose=0,tint=Color.WHITE,seated=f
 		canvas.draw_set_transform(pivot+Vector2(sin(elapsed*83),cos(elapsed*71))*shake,angle)
 		at-=pivot
 		destination=Rect2(at,drawn)
-	if palette_id>=0:canvas.draw_texture_rect(hero_palette.texture_for(palette_id,false,hd.textures[name],source,.64 if seated else 1.0,hd.regions[name][index][4] if hd.regions[name][index].size()>4 else []),destination,false,tint)
+	if side_walk:
+		var entry=hd.regions[name][index]
+		if palette_id>=0:
+			canvas.draw_texture_rect(hero_palette.texture_for(palette_id,false,hd.textures[name],source,1.0,entry[4],false,[entry[5],entry[6]]),destination,false,tint)
+		else:
+			var factor=minf(size.x/float(entry[6][0]),size.y/float(entry[6][1]))
+			drawn=source.size*factor
+			at=pos+Vector2(size.x*.5-float(entry[5])*factor,0)
+			if direction==3:at.x=pos.x+size.x*.5-(drawn.x-float(entry[5])*factor)
+			destination=Rect2(at+Vector2(drawn.x,0),Vector2(-drawn.x,drawn.y)) if direction==3 else Rect2(at,drawn)
+			hd.draw_region(name,index,destination,tint)
+	elif palette_id>=0:canvas.draw_texture_rect(hero_palette.texture_for(palette_id,false,hd.textures[name],source,.64 if seated else 1.0,hd.regions[name][index][4] if hd.regions[name][index].size()>4 else []),destination,false,tint)
 	else:hd.draw_region(name,index,destination,tint)
 	if angle!=0:canvas.draw_set_transform(Vector2(sin(elapsed*83),cos(elapsed*71))*shake)
 
@@ -1875,8 +1888,9 @@ func _draw():
 	if mode==1:racing.draw_hud();return
 	draw_hud()
 	draw_sidebar()
-	if mode==3:draw_pve_minimap()
-	rect(ORIGIN-Vector2(3,3),VIEW_SIZE*TILE+Vector2(6,6),Color("111b30"))
+	var board_scale=312.0/(VIEW_SIZE.y*TILE)
+	world_clip.scale=Vector2.ONE*board_scale
+	world_clip.position=Vector2((640-VIEW_SIZE.x*TILE*board_scale)/2,25)
 	world_canvas.queue_redraw()
 
 func draw_tile(c):
@@ -2104,7 +2118,7 @@ func draw_actor(pos,p):
 	if p.magnet>0:canvas.draw_arc(pos,16,elapsed,elapsed+3.7,18,Color("ffe08e"),1)
 
 	draw_bubble_break(pos,p)
-	var tag=Vector2(pos.x-9,pos.y-27)
+	var tag=Vector2(pos.x-9,maxf(ORIGIN.y+2,pos.y-27))
 	rect(tag,Vector2(18,7),color_for(p).darkened(.65));rect(tag,Vector2(2,7),color)
 	text_at(("B" if p.bot else "P")+str(p.id+1),tag+Vector2(3,6),7,Color.WHITE)
 
@@ -2113,73 +2127,71 @@ func draw_bubble_break(pos,p):
 	var frame=clampi(int((.55-p.pop_time)/(.55/6)),0,5)
 	hd.sprite("effects/bubble-break-v5.png",p.pop_row*6+frame,pos+Vector2(-18,-21),Vector2(36,36))
 
-func draw_hud():
-	text_at(Catalog.MAPS[arena].name,Vector2(8,11),9,CREAM)
-	centered(("%d:%02d" % [int(maxf(0,clock_time))/60,int(maxf(0,clock_time))%60]) if clock_time>0 else "坍塌中",11,10,Color("ff8b76") if clock_time<=30 else Color("ffe08e"))
-	text_at(loc(MODES[mode]),Vector2(475,11),9,CREAM,155)
-	for i in range(players.size()):
-		var p=players[i];var pos=Vector2(5+i*79,16);var color=color_for(p)
-		panel(pos,Vector2(76,29),color);rect(pos+Vector2(2,2),Vector2(2,25),color)
-		face_portrait(pos+Vector2(5,2),p.character,Vector2(12,12),p.id)
-		text_at(("B" if p.bot else "P")+str(i+1),pos+Vector2(20,11),9,color_for(p))
-		if p.item>0:item_icon(pos+Vector2(58,2),p.item,13)
-		text_at("出局" if p.dead else ("被困" if p.trap>0 else loc("泡%d 水%d 速%d") % [p.capacity,p.range,p.speed]),pos+Vector2(6,24),8,Color("8796a6") if p.dead else CREAM,66)
+func draw_round_timer():
+	var urgent=clock_time>0 and clock_time<=30
+	var pulse=(sin(elapsed*(9 if clock_time<=10 else 5))+1)*.5 if urgent else 0.0
+	var color=Color("ff795e") if urgent or clock_time<=0 else Color("70d9d5")
+	var at=Vector2(250,2)
+	panel(at,Vector2(140,21),Color(color,.55+pulse*.4))
+	if urgent:canvas.draw_rect(Rect2(at-Vector2.ONE*pulse,Vector2(140,21)+Vector2.ONE*2*pulse),Color(color,.15+pulse*.5),false,.6)
+	# A fuel pump, segmented reservoir and numeric clock share one clear focal point.
+	rect(at+Vector2(5,6),Vector2(5,10),color)
+	rect(at+Vector2(6,7),Vector2(3,3),INK)
+	canvas.draw_polyline(PackedVector2Array([at+Vector2(10,7),at+Vector2(13,9),at+Vector2(13,15),at+Vector2(11,15)]),color,.8)
+	var amount=clampf(clock_time/maxf(1,round_limit),0,1)
+	rect(at+Vector2(17,6),Vector2(70,10),Color(.025,.07,.12,.8))
+	for i in range(20):
+		var filled=amount*20-i
+		var tint=Color(color,.85+pulse*.15) if filled>0 else Color(.25,.34,.41,.38)
+		rect(at+Vector2(18+i*3.4,7),Vector2(2.5,8),tint)
+	var seconds=maxi(0,ceili(clock_time))
+	var label="%d:%02d" % [seconds/60,seconds%60] if clock_time>0 or mode==1 else "坍塌中"
+	text_at(label,at+Vector2(93,16),13,Color("fff5d5").lerp(color,pulse*.65),43)
+	if urgent:
+		var sweep=fposmod(elapsed*32,68)
+		canvas.draw_line(at+Vector2(18+sweep,6),at+Vector2(18+sweep,16),Color(1,.95,.75,.45),1)
+		for side in [-1,1]:
+			var x=320+side*(74+pulse*2)
+			canvas.draw_polyline(PackedVector2Array([Vector2(x+side*2,8),Vector2(x,12),Vector2(x+side*2,16)]),Color(color,.4+pulse*.6),1)
 
-func draw_pve_minimap():
-	var pos=Vector2(338,17);var step=minf(105.0/W,27.0/H)
-	rect(pos-Vector2.ONE,Vector2(W,H)*step+Vector2(2,2),INK)
-	for y in range(H):
-		for x in range(W):
-			if not map_void.has(Vector2i(x,y)):rect(pos+Vector2(x,y)*step,Vector2.ONE*step,Color("718094") if grid[y][x]==1 else Color("293e4b"))
-	for o in adventure.objects:
-		if not o.active:rect(pos+Vector2(o.cell)*step-Vector2.ONE,Vector2(2,2),Color("ffda70"))
-	for p in players:
-		if not p.dead:rect(pos+p.visual*step-Vector2.ONE,Vector2(2,2),color_for(p))
-	canvas.draw_rect(Rect2(pos+camera*step,VIEW_SIZE*step),Color("d4eff2"),false,.5)
-	text_at(["轻松","标准","挑战"][difficulty],Vector2(459,37),9,CREAM,73)
+func draw_hud():
+	text_at(Catalog.MAPS[arena].name,Vector2(8,15),10,CREAM,180)
+	draw_round_timer()
+	button(Vector2(552,3),Vector2(80,20),"暂停 / 退出")
+	for i in range(players.size()):
+		var p=players[i];var pos=Vector2(5+i*79,341);var color=color_for(p)
+		panel(pos,Vector2(76,15),color)
+		text_at(("B" if p.bot else "P")+str(i+1),pos+Vector2(3,10),8,color,14)
+		text_at("出局" if p.dead else "被困" if p.trap>0 else loc("泡%d 水%d 速%d") % [p.capacity,p.range,p.speed],pos+Vector2(18,10),7,Color("8796a6") if p.dead else CREAM,43)
+		if p.item>0:item_icon(pos+Vector2(63,1),p.item,12)
 
 func draw_sidebar():
-	panel(Vector2(5,55),Vector2(94,296),Color("52798b"))
-	panel(Vector2(541,55),Vector2(94,296),Color("52798b"))
 	var p=primary_player()
-	text_at("P"+str(p.id+1),Vector2(13,72),12,color_for(p))
-	item_icon(Vector2(13,82),p.item,22)
-	text_at(Catalog.ITEMS[p.item].name,Vector2(13,120),10,CREAM,78)
-	if state=="play" and notice_time>0:
-		var opacity=minf(1.0,notice_time/.4)
-		canvas.draw_rect(Rect2(10,132,84,66),Color(.10,.19,.28,.9*opacity))
-		canvas.draw_line(Vector2(11,137),Vector2(11,193),Color(1,.83,.48,opacity),1)
-		var lines=wrap_lines(loc(notice),72,9)
-		if lines.size()>4:lines=lines.slice(0,4);lines[3]+="…"
-		for i in range(lines.size()):
-			var label=lines[i]
-			if font.get_string_size(label,HORIZONTAL_ALIGNMENT_LEFT,-1,9).x>72:
-				while font.get_string_size(label+"…",HORIZONTAL_ALIGNMENT_LEFT,-1,9).x>72 and not label.is_empty():label=label.left(label.length()-1)
-				label+="…"
-			canvas.draw_string(font,Vector2(16,146+i*13),label,HORIZONTAL_ALIGNMENT_LEFT,-1,9,Color(1,.89,.66,opacity))
-	else:wrapped(Catalog.ITEMS[p.item].tip,Vector2(13,139),6,Color("aac0cc"),4)
-	var kinds=[4,5,7,16];var values=[p.capacity,p.range,p.speed,p.riding]
-	if mode==3:kinds.append(28);values.append(1+p.damage_level)
-	for i in range(kinds.size()):
-		item_icon(Vector2(13,209+i*19),kinds[i],14)
-		text_at(str(values[i]),Vector2(40,221+i*19),10,CREAM)
-	text_at(weather.label(),Vector2(13,336),9,Color("ead0a1"),79)
-	text_at("冒险任务" if mode==3 else "地图机关",Vector2(550,73),10,Color("ffe08e"),77)
+	text_at(weather.label(),Vector2(405,15),8,Color("ead0a1"),134)
+	# Short readouts use the natural aspect-ratio margins, without tall panels.
+	if p.item>0:
+		item_icon(Vector2(8,32),p.item,17)
+		text_at(Catalog.ITEMS[p.item].name,Vector2(8,61),9,CREAM,77)
 	if mode==3:
-		wrapped(adventure.stage.objective,Vector2(550,94),6,CREAM,5)
-		if adventure.stage.mission=="boss":
-			text_at(adventure.objective_label(),Vector2(550,182),9,Color("9ce3c4"),77)
-			var bosses=adventure.enemies.filter(func(e):return e.boss and not e.dead)
-			if not bosses.is_empty():health_bar(Vector2(550,195),bosses[0].hp,bosses[0].max_hp,77,3)
-		else:wrapped(adventure.objective_label(),Vector2(550,170),6,Color("9ce3c4"),4)
-		wrapped(adventure.SIDE_QUESTS[adventure_stage-1],Vector2(550,237),6,Color("cbb2e8"),2)
-		text_at(loc("支线 %d/2") % adventure.bonus_progress,Vector2(550,281),9,Color("cbb2e8"),77)
-		text_at("复苏",Vector2(550,300),9,Color("ffe08e"),58)
-		text_at(str(adventure.revives),Vector2(615,300),9,Color("ffe08e"),15)
-	else:
-		wrapped(Catalog.MAPS[arena].tip,Vector2(550,94),6,Color("b7d2ce"),6)
-		wrapped("队友可触碰救援；所有水柱都有友伤。" if mode in [0,2] else "困住对手后触碰获胜，或让泡泡计时结束。",Vector2(550,203),6,Color("9ce3c4"),5)
-	button(Vector2(549,315),Vector2(78,25),"暂停 / 退出")
+		wrapped(adventure.stage.objective,Vector2(550,42),6,CREAM,4)
+		wrapped(adventure.objective_label(),Vector2(550,105),6,Color("9ce3c4"),3)
+		text_at(loc("支线 %d/2") % adventure.bonus_progress,Vector2(550,155),8,Color("cbb2e8"),77)
+		text_at("复苏",Vector2(550,171),8,Color("ffe08e"),42)
+		text_at(str(adventure.revives),Vector2(605,171),8,CREAM,20)
+		var bosses=adventure.enemies.filter(func(e):return e.boss and not e.dead)
+		if not bosses.is_empty():health_bar(Vector2(550,184),bosses[0].hp,bosses[0].max_hp,77,3)
+		var map_at=Vector2(8,195);var step=minf(76.0/W,55.0/H)
+		for y in range(H):
+			for x in range(W):
+				if not map_void.has(Vector2i(x,y)):rect(map_at+Vector2(x,y)*step,Vector2.ONE*step,Color("718094") if grid[y][x]==1 else Color("293e4b"))
+		for o in adventure.objects:
+			if not o.active:rect(map_at+Vector2(o.cell)*step-Vector2.ONE,Vector2(2,2),Color("ffda70"))
+		for actor in players:
+			if not actor.dead:rect(map_at+actor.visual*step-Vector2.ONE,Vector2(2,2),color_for(actor))
+		canvas.draw_rect(Rect2(map_at+camera*step,VIEW_SIZE*step),Color("d4eff2"),false,.5)
+	if notice_time>0:
+		var lines=wrap_lines(loc(notice),76,8)
+		for i in range(mini(lines.size(),5)):text_at(lines[i],Vector2(8,83+i*11),8,Color("ffe3a8"),76)
 
 func mini_board(pos,step=8):
 	var theme=Catalog.MAPS[arena].theme
@@ -2277,6 +2289,7 @@ func draw_pause():
 	centered("歇一会儿",136,24,CREAM)
 	for i in range(3):button(Vector2(195,153+i*32),Vector2(250,28),["继续对战","返回大厅（记录退出）","保存并退出游戏"][i],i==quit_selection)
 	centered("上下选择 / 回车确认 / ESC 继续",294,12)
+	wrapped(Catalog.MAPS[arena].tip,Vector2(80,318),40,Color("b7d2ce"),2)
 func draw_result():
 	rect(Vector2.ZERO,Vector2(640,360),Color(.03,.06,.12,.88))
 	panel(Vector2(50,24),Vector2(540,322),Color("ffe08e"))
