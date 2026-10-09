@@ -996,7 +996,7 @@ func movement_blocked(p,position,dir):
 			if grid[y][x]==1 or (grid[y][x]==2 and p.cloak<=0):
 				if grid[y][x]==2 and p.push_cool<=0 and dir!=Vector2i.ZERO and crates.try_push(c,dir,p):p.push_cool=.18
 				if grid[y][x] in [1,2]:
-					if p.mount==3 and p.jump<=0 and dir!=Vector2i.ZERO:
+					if p.mount==3 and p.jump<=0 and dir!=Vector2i.ZERO and c==p.cell+dir and bomb_at(c)==null:
 						var landing=c+dir
 						if passable(landing,p) and (mode!=3 or camera_contains(Vector2(landing))):
 							p.jump_from=p.visual;p.jump_to=Vector2(landing);p.jump_travel=.42;p.jump=.8;p.velocity=Vector2.ZERO;p.facing=dir
@@ -1161,7 +1161,6 @@ func pickup(p,c,manual=false):
 	if previous>0:
 		drops[c]=previous
 		p.pickup_lock=c
-	if category=="active" and not p.bot:announce("拾取"+Catalog.ITEMS[kind].name+("，原道具留在地上。" if previous>0 else ""))
 	pickup_effects.append({"pos":center(c),"kind":kind,"life":.65})
 	match kind:
 		31:p.car=true;p.mount=0;p.velocity=Vector2.ZERO;p.car_heading=Vector2(p.facing)
@@ -1547,12 +1546,17 @@ func danger_cells():
 				if mini(mini(x,W-1-x),mini(y,H-1-y))==next_ring:danger[Vector2i(x,y)]=2
 	return danger
 
-func escape_direction(p,danger):
+func escape_direction(p,danger,allow_partial=false):
 	var queue=[{"cell":p.cell,"first":Vector2i.ZERO,"depth":0}]
 	var visited={p.cell:true}
+	var fallback=Vector2i.ZERO
+	var best_margin=-INF
 	while not queue.is_empty():
 		var node=queue.pop_front()
 		if node.depth>0 and not danger.has(node.cell):return node.first
+		if allow_partial and node.depth>0:
+			var margin=float(danger[node.cell])-node.depth*move_duration(p)+(.01 if node.first==p.ai_dir else 0.0)
+			if margin>best_margin:best_margin=margin;fallback=node.first
 		if node.depth>=[6,9,12][difficulty]:continue
 		for dir in DIRS:
 			var c=node.cell+dir
@@ -1560,7 +1564,7 @@ func escape_direction(p,danger):
 			if danger.get(c,99)<(node.depth+1)*move_duration(p)+.15:continue
 			visited[c]=true
 			queue.append({"cell":c,"first":dir if node.depth==0 else node.first,"depth":node.depth+1})
-	return Vector2i.ZERO
+	return fallback
 
 func route_direction(p,target,danger):
 	var queue=[{"cell":p.cell,"first":Vector2i.ZERO}]
@@ -1581,7 +1585,7 @@ func route_direction(p,target,danger):
 
 func bot_direction(p,danger):
 	if danger.has(p.cell):
-		var escape=escape_direction(p,danger)
+		var escape=escape_direction(p,danger,true)
 		if escape!=Vector2i.ZERO:return escape
 	if mode in [1,2]:
 		var options=[]
@@ -1626,6 +1630,7 @@ func bot_direction(p,danger):
 	var choices: Array=[]
 	for d in DIRS:
 		if passable(p.cell+d,p) and can_cross(p.cell,p.cell+d) and not danger.has(p.cell+d):choices.append(d)
+	if choices.has(p.ai_dir):return p.ai_dir
 	return choices[rng.randi_range(0,choices.size()-1)] if not choices.is_empty() else Vector2i.ZERO
 
 func bot_actions(p,danger):

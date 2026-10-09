@@ -28,7 +28,8 @@ func texture_for(id,character,phase,walking):
 	var factor=19.0/body.size.y
 	var origin=Vector2(11-float(entry[4])*factor,0)
 	var shoulder=origin+body.size*SHOULDERS[character]*factor
-	var hip=Vector2(shoulder.x-.5,17.3)
+	# Backpacks and rear shoulders must not push the legs behind the head/body axis.
+	var hip=Vector2(11,17.3)
 	var swing=sin(phase*TAU/12.0)*render.amount
 	var team=g.players[id].team if id>=0 and id<g.players.size() and g.state in ["play","pause","finale","result"] else g.slot_team(maxi(0,id))
 	# Far leg, far arm, near leg, torso, near arm. Opposite arm and leg advance together.
@@ -41,6 +42,7 @@ func texture_for(id,character,phase,walking):
 		sprite.texture=g.hd.textures[name];sprite.region_rect=region
 		var scale_factor=factor if is_body else (8.7 if i in [0,2] else 8.1)/region.size.y
 		var joint=Vector2(region.size.x*.5,region.size.y*.12)
+		if i in [0,2]:joint.x=float(g.hd.regions[rig][parts[i]][5])
 		sprite.offset=Vector2.ZERO if is_body else -joint
 		sprite.scale=Vector2.ONE*scale_factor*8
 		sprite.position=(origin if is_body else hip+Vector2(-.6 if i==0 else .6,0) if i in [0,2] else shoulder+Vector2(-1.0 if i==1 else 0,0))*8

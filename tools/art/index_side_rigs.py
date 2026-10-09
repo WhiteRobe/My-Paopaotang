@@ -63,7 +63,9 @@ def index(regions):
                     top=y0
                     if path.name=='robot-v501.png' and row==1 and col<2:top=int(h*.69)
                     box,omissions=bounds(alpha,cuts[col],top,cuts[col+1],y1)
-                    cells.append(box+[omissions])
+                    x,y,bw,bh=box
+                    upper=np.argwhere(alpha[y:y+int(bh*.22),x:x+bw])
+                    cells.append(box+[omissions,float(upper[:,1].mean())])
         regions[path.relative_to(ROOT).as_posix()]=cells
     return regions
 if __name__=='__main__':

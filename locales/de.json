@@ -874,12 +874,12 @@
   "%s夺冠！": "%s ist Meister!",
   "速度固定二级，一格耐久；已有坐骑时重复拾取不会替换，死亡全部掉落。": "Festes Tempo Stufe 2, Haltbarkeit 1. Weitere Reittiere ersetzen das aktuelle nicht und werden beim Tod fallen gelassen.",
   "速度固定最低级，两格耐久，可承受两次水柱。": "Festes Mindesttempo, Haltbarkeit 2; hält zwei Wasserstrahlen aus.",
-  "速度固定最高级，一格耐久；可跳过单格障碍，跑八格后休息一秒，蓝条显示耐力。": "Festes Höchsttempo, Haltbarkeit 1. Springt über einzelne Hindernisfelder und ruht nach acht Feldern eine Sekunde. Blauer Ausdauerbalken.",
   "骑术最多三级，拾取时修复当前坐骑一点耐久，不改变固定速度和血量上限。": "Bis zu drei Reitstufen. Jede Aufnahme repariert einen Haltbarkeitspunkt, ohne festes Tempo oder maximale Haltbarkeit zu ändern.",
   "泡泡糖 · 像素群岛大冒险 · v4.9.9": "Bubblegum · Pixelinseln-Abenteuer · v4.9.9",
   "重新开始": "Partie neu starten",
   "ESC / P 暂停，可重新开始或返回大厅；M 声音。": "ESC / P: Pause, Neustart oder Lobby; M: Ton.",
   "传送带顺向加速、逆向减速，也会运送泡泡和地上的道具。": "Förderbänder beschleunigen mit und bremsen gegen die Laufrichtung. Auch Blasen und Gegenstände werden befördert.",
   "暗河水流运送人物、泡泡和道具；沿火把探索，留意泡泡预警。": "Die Strömung trägt Spieler, Blasen und Gegenstände. Folge den Fackeln und beachte Blasenwarnungen.",
-  "泡泡糖 · 像素群岛大冒险 · v5.0.1": "Bubblegum · Pixelinsel-Abenteuer · v5.0.1"
+  "泡泡糖 · 像素群岛大冒险 · v5.0.2": "Bubblegum · Pixelinsel-Abenteuer · v5.0.2",
+  "速度固定最高级，一格耐久；可跳过单格墙箱，不能跳过泡泡；跑八格后休息一秒，蓝条显示耐力。": "Festes Höchsttempo, Haltbarkeit 1. Springt über einzelne Mauer- und Kistenfelder, aber nicht über Blasen. Nach acht Feldern eine Sekunde Pause. Blauer Ausdauerbalken."
 }

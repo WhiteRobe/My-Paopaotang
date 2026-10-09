@@ -874,12 +874,12 @@
   "%s夺冠！": "%s remporte le titre !",
   "速度固定二级，一格耐久；已有坐骑时重复拾取不会替换，死亡全部掉落。": "Vitesse fixe de niveau 2, durabilité 1. Les montures supplémentaires sont conservées sans remplacement et tombent à la mort.",
   "速度固定最低级，两格耐久，可承受两次水柱。": "Vitesse minimale fixe, durabilité 2 ; résiste à deux jets d’eau.",
-  "速度固定最高级，一格耐久；可跳过单格障碍，跑八格后休息一秒，蓝条显示耐力。": "Vitesse maximale fixe, durabilité 1. Saute les obstacles d’une case ; une seconde de repos après huit cases. La barre bleue indique l’endurance.",
   "骑术最多三级，拾取时修复当前坐骑一点耐久，不改变固定速度和血量上限。": "Trois niveaux d’équitation maximum. Chaque objet répare un point de durabilité sans modifier la vitesse fixe ni la durabilité maximale.",
   "泡泡糖 · 像素群岛大冒险 · v4.9.9": "Bubblegum · Aventure des îles pixel · v4.9.9",
   "重新开始": "Recommencer la partie",
   "ESC / P 暂停，可重新开始或返回大厅；M 声音。": "ESC / P : pause, recommencer ou revenir au salon ; M : son.",
   "传送带顺向加速、逆向减速，也会运送泡泡和地上的道具。": "Les tapis accélèrent dans leur sens et ralentissent à contre-courant. Ils transportent aussi bulles et objets.",
   "暗河水流运送人物、泡泡和道具；沿火把探索，留意泡泡预警。": "Le courant souterrain transporte joueurs, bulles et objets. Suivez les torches et surveillez les alertes.",
-  "泡泡糖 · 像素群岛大冒险 · v5.0.1": "Bubblegum · Aventure des îles pixel · v5.0.1"
+  "泡泡糖 · 像素群岛大冒险 · v5.0.2": "Bubblegum · Aventure des îles pixel · v5.0.2",
+  "速度固定最高级，一格耐久；可跳过单格墙箱，不能跳过泡泡；跑八格后休息一秒，蓝条显示耐力。": "Vitesse maximale fixe, durabilité 1. Saute les murs et caisses d’une case, mais pas les bulles ; une seconde de repos après huit cases. La barre bleue indique l’endurance."
 }

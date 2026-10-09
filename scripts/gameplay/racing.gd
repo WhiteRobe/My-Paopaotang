@@ -198,7 +198,7 @@ func vehicle_velocity(p,dir,dt):
 	return velocity
 func bot_direction(p,danger):
 	if p.race_finished:return Vector2i.ZERO
-	if danger.has(p.cell):return g.escape_direction(p,danger)
+	if danger.has(p.cell):return g.escape_direction(p,danger,true)
 	if not p.car:
 		var queue=[p.cell];var visited={p.cell:true};var best=null;var score=99999
 		var distance={p.cell:0}
